@@ -1,0 +1,21 @@
+# Copy this file to terraform.tfvars and fill in your values.
+# Never commit terraform.tfvars — it contains secrets.
+
+subscription_id = "00000000-0000-0000-0000-000000000000"
+
+# Object ID of your Entra group that will be SQL external admin
+# az ad group show --group "SQLAdmin" --query id -o tsv
+entra_admin_group_object_id = "00000000-0000-0000-0000-000000000000"
+entra_admin_group_name      = "SQLAdmin"
+
+sql_admin_password = "Change_Me_Str0ng!"
+
+# Optional overrides — defaults match the blog post naming
+# location             = "uksouth"
+# resource_group_name  = "rg-dab-prod-001"
+# sql_server_name      = "sqlsvr-dab-prod-001"
+# sql_database_name    = "sqldb-dab-prod-001"
+# storage_account_name = "dabconfigstorage001"   # must be globally unique
+# container_name       = "ci-dab-prod-001"
+# container_dns_label  = "ci-dab-prod-001"       # must be globally unique in region
+# function_app_name    = "func-dab-prod-001"
