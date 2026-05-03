@@ -19,10 +19,8 @@ resource "azurerm_mssql_database" "dab" {
   name      = var.sql_database_name
   server_id = azurerm_mssql_server.dab.id
 
-  # Serverless GP Gen5 2 vCores — matches the blog's CLI parameters
-  sku_name                    = "GP_S_Gen5_2"
-  auto_pause_delay_in_minutes = 60
-  min_capacity                = 0.5
+  # Basic (5 DTU) — cheapest available tier, ~$5/month
+  sku_name = "Basic"
 
   # Seed with AdventureWorksLT for the demo entities
   sample_name = "AdventureWorksLT"
