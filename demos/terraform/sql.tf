@@ -35,6 +35,19 @@ resource "azurerm_mssql_firewall_rule" "allow_azure_services" {
   end_ip_address   = "0.0.0.0"
 }
 
+# Fetch the public IP of the machine running terraform so the local-exec
+# provisioner below can reach the SQL server.
+data "external" "deployer_ip" {
+  program = ["PowerShell", "-Command", "Write-Output ('{\"ip\":\"' + (iwr https://icanhazip.com/).content.Trim() + '\"}')" ]
+}
+
+resource "azurerm_mssql_firewall_rule" "deployer_ip" {
+  name             = "DeployerIP"
+  server_id        = azurerm_mssql_server.dab.id
+  start_ip_address = data.external.deployer_ip.result.ip
+  end_ip_address   = data.external.deployer_ip.result.ip
+}
+
 # Grant the container instance's managed identity read/write access.
 # This must run after the container (and its MI) is created and requires
 # an active az CLI session authenticated with the Entra admin account.
@@ -43,6 +56,7 @@ resource "null_resource" "container_db_user" {
     azurerm_container_group.dab,
     azurerm_mssql_database.dab,
     azurerm_mssql_firewall_rule.allow_azure_services,
+    azurerm_mssql_firewall_rule.deployer_ip,
   ]
 
   triggers = {
