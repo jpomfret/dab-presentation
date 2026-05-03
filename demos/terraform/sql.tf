@@ -26,9 +26,6 @@ resource "azurerm_mssql_database" "dab" {
 
   # Seed with AdventureWorksLT for the demo entities
   sample_name = "AdventureWorksLT"
-
-  # Keep on the free monthly limit; pause instead of billing on exhaustion
-  free_limit_exhaustion_behavior = "AutoPause"
 }
 
 # Allow all Azure-internal traffic (start/end 0.0.0.0) so the container
