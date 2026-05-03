@@ -38,7 +38,7 @@ resource "azurerm_mssql_firewall_rule" "allow_azure_services" {
 # Fetch the public IP of the machine running terraform so the local-exec
 # provisioner below can reach the SQL server.
 data "external" "deployer_ip" {
-  program = ["PowerShell", "-Command", "Write-Output ('{\"ip\":\"' + (iwr https://icanhazip.com/).content.Trim() + '\"}')" ]
+  program = ["PowerShell", "-Command", "Write-Output ('{\"ip\":\"' + (Invoke-RestMethod -Uri 'https://checkip.amazonaws.com').Trim() + '\"}')" ]
 }
 
 resource "azurerm_mssql_firewall_rule" "deployer_ip" {
