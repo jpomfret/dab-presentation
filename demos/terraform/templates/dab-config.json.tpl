@@ -13,7 +13,7 @@
     "graphql": {
       "enabled": true,
       "path": "/graphql",
-      "allow-introspection": true
+      "allow-introspection": false
     },
     "host": {
       "cors": {
@@ -27,7 +27,7 @@
           "issuer": "https://sts.windows.net/__TENANT_ID__/"
         }
       },
-      "mode": "development"
+      "mode": "production"
     }
   },
   "entities": {

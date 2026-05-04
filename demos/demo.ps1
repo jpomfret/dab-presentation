@@ -32,8 +32,6 @@ $appID = '78fca3ef-71ec-44e7-b268-949d7e947466'
 $tenantId = 'f98042ad-9bbc-499d-adb4-17193696b9a3'
 az login --tenant $tenantId --scope "api://$appID/.default"
 
-az login --tenant $tenantId --scope "api://$appID/.default"
-
 $token = (az account get-access-token --tenant $tenantId --resource "api://$appID" | ConvertFrom-Json).accessToken
 
 # Verify it's v1.0
