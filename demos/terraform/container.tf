@@ -48,12 +48,17 @@ resource "azurerm_container_group" "dab" {
 }
 
 # Restart the container after the SQL database user is provisioned so it can
-# start in a healthy state with full database access.
+# start in a healthy state with full database access. Also restarts when the
+# DAB config template changes so new permissions/entities take effect.
 resource "null_resource" "restart_container" {
-  depends_on = [null_resource.container_db_user]
+  depends_on = [
+    null_resource.container_db_user,
+    null_resource.upload_dab_config,
+  ]
 
   triggers = {
     container_db_user = null_resource.container_db_user.id
+    config_hash       = null_resource.upload_dab_config.id
   }
 
   provisioner "local-exec" {

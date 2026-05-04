@@ -28,6 +28,17 @@ output "function_app_identity_principal_id" {
   value       = azurerm_windows_function_app.dab.identity[0].principal_id
 }
 
+output "app_insights_connection_string" {
+  description = "Application Insights connection string for the Function App"
+  value       = azurerm_application_insights.dab.connection_string
+  sensitive   = true
+}
+
+output "dashboard_url" {
+  description = "URL of the Chase the Sun training dashboard"
+  value       = "https://${azurerm_static_web_app.dashboard.default_host_name}"
+}
+
 output "container_identity_principal_id" {
   description = "Object ID of the Container Instance's system-assigned managed identity"
   value       = azurerm_container_group.dab.identity[0].principal_id

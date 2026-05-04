@@ -99,3 +99,31 @@ variable "app_service_plan_name" {
   type        = string
   default     = "asp-dab-prod-001"
 }
+
+variable "app_insights_name" {
+  description = "Name of the Application Insights instance for the Function App"
+  type        = string
+  default     = "appi-dab-prod-001"
+}
+
+# Intervals.icu
+
+variable "intervals_athlete_id" {
+  description = "intervals.icu athlete ID — use '0' to resolve to the owner of the API key"
+  type        = string
+  default     = "0"
+}
+
+variable "intervals_api_key" {
+  description = "API key generated in intervals.icu /settings (Developer Settings)"
+  type        = string
+  sensitive   = true
+}
+
+# Dashboard
+
+variable "static_web_app_name" {
+  description = "Name of the Azure Static Web App hosting the training dashboard"
+  type        = string
+  default     = "swa-dab-prod-001"
+}

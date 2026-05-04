@@ -19,3 +19,8 @@ sql_admin_password = "Change_Me_Str0ng!"
 # container_name       = "ci-dab-prod-001"
 # container_dns_label  = "ci-dab-prod-001"       # must be globally unique in region
 # function_app_name    = "func-dab-prod-001"
+
+# Intervals.icu sync — generate your API key at intervals.icu /settings
+# Use "0" for intervals_athlete_id to resolve to the key owner automatically
+intervals_athlete_id = "0"
+intervals_api_key    = "your-intervals-api-key-here"

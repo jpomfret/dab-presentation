@@ -74,3 +74,44 @@ resource "null_resource" "container_db_user" {
     EOT
   }
 }
+
+# Create the Intervals.icu tables that IntervalsSync writes to.
+# Re-runs only if the database is recreated (tracked by database id).
+resource "null_resource" "intervals_tables" {
+  depends_on = [
+    azurerm_mssql_database.dab,
+    azurerm_mssql_firewall_rule.allow_azure_services,
+    azurerm_mssql_firewall_rule.deployer_ip,
+    null_resource.container_db_user,
+  ]
+
+  triggers = {
+    database_id          = azurerm_mssql_database.dab.id
+    wellness_sp_hash     = filemd5("${path.module}/templates/usp_UpsertWellness.sql")
+    activity_sp_hash     = filemd5("${path.module}/templates/usp_UpsertActivity.sql")
+    logsync_sp_hash      = filemd5("${path.module}/templates/usp_LogSync.sql")
+  }
+
+  provisioner "local-exec" {
+    interpreter = ["PowerShell", "-Command"]
+    command     = <<-EOT
+      $ErrorActionPreference = 'Stop'
+      $token  = (az account get-access-token --resource https://database.windows.net | ConvertFrom-Json).accessToken
+      $server = "${azurerm_mssql_server.dab.fully_qualified_domain_name}"
+      $db     = "${var.sql_database_name}"
+
+      Invoke-Sqlcmd -ServerInstance $server -Database $db -AccessToken $token -Query "IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'IntervalsWellness' AND schema_id = SCHEMA_ID('dbo')) BEGIN CREATE TABLE dbo.IntervalsWellness (RecordDate date NOT NULL, CTL float NULL, ATL float NULL, TSB float NULL, RampRate float NULL, CTLLoad float NULL, ATLLoad float NULL, Weight float NULL, RestingHR int NULL, HRV float NULL, SleepSecs int NULL, SleepScore float NULL, SleepQuality nvarchar(50) NULL, Form nvarchar(50) NULL, Updated datetime2 NULL, InsertedAt datetime2 NOT NULL DEFAULT GETUTCDATE(), CONSTRAINT PK_IntervalsWellness PRIMARY KEY (RecordDate)) END"
+
+      Invoke-Sqlcmd -ServerInstance $server -Database $db -AccessToken $token -Query "IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'IntervalsActivity' AND schema_id = SCHEMA_ID('dbo')) BEGIN CREATE TABLE dbo.IntervalsActivity (ActivityId nvarchar(50) NOT NULL, StartDateLocal datetime2 NULL, ActivityType nvarchar(50) NULL, ActivityName nvarchar(500) NULL, MovingTime int NULL, Distance float NULL, TrainingLoad float NULL, ATLLoad float NULL, CTLLoad float NULL, Intensity float NULL, AverageWatts float NULL, AverageHeartrate float NULL, TotalElevationGain float NULL, CTL float NULL, ATL float NULL, InsertedAt datetime2 NOT NULL DEFAULT GETUTCDATE(), CONSTRAINT PK_IntervalsActivity PRIMARY KEY (ActivityId)) END"
+
+      Invoke-Sqlcmd -ServerInstance $server -Database $db -AccessToken $token -InputFile "${path.module}/templates/usp_UpsertWellness.sql"
+      Invoke-Sqlcmd -ServerInstance $server -Database $db -AccessToken $token -InputFile "${path.module}/templates/usp_UpsertActivity.sql"
+      Invoke-Sqlcmd -ServerInstance $server -Database $db -AccessToken $token -InputFile "${path.module}/templates/usp_LogSync.sql"
+
+      # Grant the DAB container MI EXECUTE on the stored procedures
+      Invoke-Sqlcmd -ServerInstance $server -Database $db -AccessToken $token -Query "GRANT EXECUTE ON dbo.usp_UpsertWellness TO [${var.container_name}]; GRANT EXECUTE ON dbo.usp_UpsertActivity TO [${var.container_name}]; GRANT EXECUTE ON dbo.usp_LogSync TO [${var.container_name}];"
+
+      Write-Host "Intervals tables and stored procedures created."
+    EOT
+  }
+}

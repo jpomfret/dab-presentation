@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chase the Sun — Training Dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌞</text></svg>">
+  <style>
+    :root {
+      --bg:     #0f1117;
+      --card:   #1a1d27;
+      --border: #2a2d3e;
+      --accent: #f97316;
+      --green:  #22c55e;
+      --red:    #ef4444;
+      --yellow: #eab308;
+      --text:   #e2e8f0;
+      --muted:  #64748b;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────────────── */
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .brand { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.02em; }
+    .brand span { color: var(--accent); }
+    .brand small {
+      display: block;
+      font-size: 0.65rem;
+      font-weight: 400;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 0.1rem;
+    }
+
+    /* ── Countdown ───────────────────────────────────────── */
+    .countdown { display: flex; align-items: flex-end; gap: 0.4rem; }
+    .cd-unit { text-align: center; min-width: 2.8rem; }
+    .cd-num  { font-size: 1.8rem; font-weight: 700; color: var(--accent); line-height: 1; font-variant-numeric: tabular-nums; }
+    .cd-lbl  { font-size: 0.58rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+    .cd-sep  { font-size: 1.4rem; font-weight: 700; color: var(--accent); padding-bottom: 1.1rem; }
+
+    /* ── Main layout ─────────────────────────────────────── */
+    main { padding: 2rem; max-width: 1280px; margin: 0 auto; }
+
+    /* ── Section headings ────────────────────────────────── */
+    .section-heading {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .section-heading::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* ── Wellness cards ──────────────────────────────────── */
+    .wellness-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+    }
+    .card-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.5rem; }
+    .card-value { font-size: 3rem; font-weight: 800; line-height: 1; margin-bottom: 0.2rem; font-variant-numeric: tabular-nums; }
+    .card-sub   { font-size: 0.78rem; color: var(--muted); }
+    .badge {
+      display: inline-block;
+      margin-top: 0.75rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .c-accent { color: var(--accent); }
+    .c-green  { color: var(--green);  }
+    .c-red    { color: var(--red);    }
+    .c-yellow { color: var(--yellow); }
+    .c-muted  { color: var(--muted);  }
+
+    .badge-green  { background: rgba(34,197,94,.15);  color: var(--green);  }
+    .badge-yellow { background: rgba(234,179,8,.15);  color: var(--yellow); }
+    .badge-red    { background: rgba(239,68,68,.15);  color: var(--red);    }
+    .badge-orange { background: rgba(249,115,22,.15); color: var(--accent); }
+
+    #date-note { font-size: 0.75rem; color: var(--muted); margin-top: -0.5rem; margin-bottom: 1.5rem; }
+
+    /* ── Activity list ───────────────────────────────────── */
+    .activities { display: flex; flex-direction: column; gap: 0.625rem; margin-bottom: 2rem; }
+    .activity-row {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1rem 1.25rem;
+      display: grid;
+      grid-template-columns: 2.5rem 1fr auto;
+      gap: 1rem;
+      align-items: center;
+    }
+    .act-icon {
+      width: 2.5rem; height: 2.5rem;
+      border-radius: 50%;
+      background: rgba(249,115,22,.12);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; flex-shrink: 0;
+    }
+    .act-name { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .act-meta { font-size: 0.78rem; color: var(--muted); margin-top: 0.15rem; }
+    .act-stats { display: flex; gap: 1.25rem; flex-shrink: 0; }
+    .stat { text-align: right; }
+    .stat-val { font-size: 0.9rem; font-weight: 600; white-space: nowrap; }
+    .stat-lbl { font-size: 0.62rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+    .loading { color: var(--muted); padding: 1.5rem 0; font-size: 0.9rem; }
+    .error-bar {
+      background: rgba(239,68,68,.1);
+      border: 1px solid rgba(239,68,68,.3);
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      color: var(--red);
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
+
+    @media (max-width: 640px) {
+      .act-stats { gap: 0.75rem; }
+      .act-stats .stat:nth-child(n+4) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    🌞 Chase the <span>Sun</span>
+    <small>June 20, 2026 &middot; Training Dashboard</small>
+  </div>
+  <div class="countdown">
+    <div class="cd-unit"><div class="cd-num" id="cd-d">--</div><div class="cd-lbl">days</div></div>
+    <div class="cd-sep">:</div>
+    <div class="cd-unit"><div class="cd-num" id="cd-h">--</div><div class="cd-lbl">hrs</div></div>
+    <div class="cd-sep">:</div>
+    <div class="cd-unit"><div class="cd-num" id="cd-m">--</div><div class="cd-lbl">min</div></div>
+    <div class="cd-sep">:</div>
+    <div class="cd-unit"><div class="cd-num" id="cd-s">--</div><div class="cd-lbl">sec</div></div>
+  </div>
+</header>
+
+<main>
+  <div id="error-box" class="error-bar" style="display:none"></div>
+
+  <div class="section-heading">Wellness</div>
+  <p id="date-note"></p>
+  <div class="wellness-grid" id="wellness-grid">
+    <div class="card"><div class="loading">Loading&hellip;</div></div>
+  </div>
+
+  <div class="section-heading">Recent Activities</div>
+  <div class="activities" id="activities-list">
+    <div class="loading">Loading&hellip;</div>
+  </div>
+</main>
+
+<script>
+const RACE_DATE = new Date('2026-06-20T04:00:00Z');
+
+// ── Countdown ─────────────────────────────────────────────────────────────────
+function pad(n) { return String(Math.max(0, n)).padStart(2, '0'); }
+function tick() {
+  const diff = RACE_DATE - new Date();
+  if (diff <= 0) {
+    document.getElementById('countdown').innerHTML =
+      '<span style="color:var(--accent);font-weight:700">🎉 Race Day!</span>';
+    return;
+  }
+  document.getElementById('cd-d').textContent = Math.floor(diff / 86400000);
+  document.getElementById('cd-h').textContent = pad(Math.floor(diff % 86400000 / 3600000));
+  document.getElementById('cd-m').textContent = pad(Math.floor(diff % 3600000 / 60000));
+  document.getElementById('cd-s').textContent = pad(Math.floor(diff % 60000 / 1000));
+}
+tick(); setInterval(tick, 1000);
+
+// ── Fetch helper ──────────────────────────────────────────────────────────────
+async function dabGet(path) {
+  const res = await fetch(path);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return (await res.json()).value ?? [];
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-box');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+// ── Wellness ──────────────────────────────────────────────────────────────────
+function formBadge(tsb) {
+  if (tsb == null) return '';
+  if (tsb >  10)   return '<span class="badge badge-green">Fresh</span>';
+  if (tsb >= -10)  return '<span class="badge badge-orange">Optimal</span>';
+  if (tsb >= -30)  return '<span class="badge badge-red">Fatigued</span>';
+  return '<span class="badge badge-red">Very Fatigued</span>';
+}
+function optCard(label, value, unit, cls) {
+  if (value == null) return '';
+  const v = typeof value === 'number' && !Number.isInteger(value) ? value.toFixed(1) : Math.round(value);
+  return `<div class="card">
+    <div class="card-label">${label}</div>
+    <div class="card-value ${cls}" style="font-size:2.25rem">${v}<span style="font-size:0.9rem;font-weight:400;color:var(--muted)"> ${unit}</span></div>
+  </div>`;
+}
+
+async function loadWellness() {
+  try {
+    const rows = await dabGet('/api/wellness');
+    if (!rows?.length) {
+      document.getElementById('wellness-grid').innerHTML = '<div class="card c-muted">No wellness data yet.</div>';
+      return;
+    }
+    const w   = rows[0];
+    const ctl = w.CTL != null ? Math.round(w.CTL) : null;
+    const atl = w.ATL != null ? Math.round(w.ATL) : null;
+    const tsb = ctl != null && atl != null ? ctl - atl : null;
+    const tsbStr = tsb != null ? (tsb >= 0 ? '+' : '') + tsb : '—';
+    const tsbCls = tsb == null ? 'c-muted' : tsb > 5 ? 'c-green' : tsb >= -10 ? 'c-yellow' : 'c-red';
+
+    if (w.RecordDate) {
+      document.getElementById('date-note').textContent =
+        'As of ' + new Date(w.RecordDate).toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+    }
+    document.getElementById('wellness-grid').innerHTML = `
+      <div class="card">
+        <div class="card-label">Fitness (CTL)</div>
+        <div class="card-value c-accent">${ctl ?? '—'}</div>
+        <div class="card-sub">Chronic Training Load</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Fatigue (ATL)</div>
+        <div class="card-value c-yellow">${atl ?? '—'}</div>
+        <div class="card-sub">Acute Training Load</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Form (TSB)</div>
+        <div class="card-value ${tsbCls}">${tsbStr}</div>
+        <div class="card-sub">Training Stress Balance</div>
+        ${formBadge(tsb)}
+      </div>
+      ${optCard('Weight',     w.Weight,    'kg',  'c-accent')}
+      ${optCard('Resting HR', w.RestingHR, 'bpm', 'c-accent')}
+      ${optCard('HRV',        w.HRV,       'ms',  'c-green')}
+    `;
+  } catch(e) { showError(`Wellness: ${e.message}`); }
+}
+
+// ── Activities ────────────────────────────────────────────────────────────────
+const ICONS = { Ride:'🚴', Run:'🏃', Swim:'🏊', Walk:'🚶', VirtualRide:'🖥️', WeightTraining:'🏋️', Hike:'🥾', Rowing:'🚣', Yoga:'🧘', Workout:'💪', Strength:'🏋️', Cycling:'🚴', MountainBikeRide:'🚵', AlpineSki:'⛷️', NordicSki:'🎿' };
+function fmtDist(m)  { return m ? (m/1000).toFixed(1)+' km' : '—'; }
+function fmtTime(s)  { if (!s) return '—'; const h=Math.floor(s/3600),m=Math.floor(s%3600/60); return h?`${h}h ${m}m`:`${m}m`; }
+function fmtNum(v,u='') { return v != null ? Math.round(v)+u : '—'; }
+
+async function loadActivities() {
+  try {
+    const rows = await dabGet('/api/activities');
+    if (!rows?.length) {
+      document.getElementById('activities-list').innerHTML = '<div class="loading">No activities found.</div>';
+      return;
+    }
+    document.getElementById('activities-list').innerHTML = rows.map(a => {
+      const dt = a.StartDateLocal
+        ? new Date(a.StartDateLocal).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' })
+        : '';
+      const icon = ICONS[a.ActivityType] ?? '🏅';
+      return `<div class="activity-row">
+        <div class="act-icon">${icon}</div>
+        <div>
+          <div class="act-name">${a.ActivityName || a.ActivityType || 'Activity'}</div>
+          <div class="act-meta">${dt}${a.ActivityType ? ' · ' + a.ActivityType : ''}</div>
+        </div>
+        <div class="act-stats">
+          <div class="stat"><div class="stat-val">${fmtDist(a.Distance)}</div><div class="stat-lbl">Distance</div></div>
+          <div class="stat"><div class="stat-val">${fmtTime(a.MovingTime)}</div><div class="stat-lbl">Time</div></div>
+          <div class="stat"><div class="stat-val">${fmtNum(a.AverageWatts,'w')}</div><div class="stat-lbl">Avg Power</div></div>
+          <div class="stat"><div class="stat-val">${fmtNum(a.AverageHeartrate,' bpm')}</div><div class="stat-lbl">Avg HR</div></div>
+          <div class="stat"><div class="stat-val">${fmtNum(a.TrainingLoad)}</div><div class="stat-lbl">TSS</div></div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { showError(`Activities: ${e.message}`); }
+}
+
+loadWellness();
+loadActivities();
+</script>
+</body>
+</html>

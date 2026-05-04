@@ -33,6 +33,16 @@ resource "azuread_application" "dab_api" {
     allowed_member_types = ["Application"]
     enabled              = true
   }
+
+  # identifier_uris is set post-creation by null_resource.app_identifier_uri
+  # (it must reference the app's own client_id, which is only known after
+  # the resource is created). Ignore changes here so Terraform never resets
+  # it to empty on subsequent applies.
+  # single_page_application redirect URIs are set post-creation by
+  # null_resource.dashboard_redirect_uris once the SWA URL is known.
+  lifecycle {
+    ignore_changes = [identifier_uris, single_page_application]
+  }
 }
 
 # Pre-authorize the Azure CLI so users can request tokens without a consent UI.
@@ -53,7 +63,14 @@ resource "null_resource" "app_identifier_uri" {
   }
 
   provisioner "local-exec" {
-    command = "az ad app update --id ${azuread_application.dab_api.client_id} --identifier-uris api://${azuread_application.dab_api.client_id}"
+    interpreter = ["PowerShell", "-Command"]
+    command     = <<-EOT
+      $ErrorActionPreference = 'Stop'
+      az ad app update --id ${azuread_application.dab_api.client_id} --identifier-uris api://${azuread_application.dab_api.client_id}
+      $uri = az ad app show --id ${azuread_application.dab_api.client_id} --query "identifierUris[0]" -o tsv
+      if ($uri -ne "api://${azuread_application.dab_api.client_id}") { throw "identifier_uri was not set — re-run terraform apply" }
+      Write-Host "identifier_uri set: $uri"
+    EOT
   }
 }
 

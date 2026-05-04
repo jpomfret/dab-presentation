@@ -23,8 +23,8 @@
       "authentication": {
         "provider": "EntraID",
         "jwt": {
-          "audience": "api://__APP_ID__",
-          "issuer": "https://sts.windows.net/__TENANT_ID__/"
+          "audience": "api://78fca3ef-71ec-44e7-b268-949d7e947466",
+          "issuer": "https://sts.windows.net/f98042ad-9bbc-499d-adb4-17193696b9a3/"
         }
       },
       "mode": "development"
@@ -198,35 +198,6 @@
         }
       ]
     },
-    "LogSync": {
-      "source": {
-        "object": "dbo.usp_LogSync",
-        "type": "stored-procedure",
-        "parameters": {
-          "TriggerType":         "Timer",
-          "DateRangeStart":      "",
-          "DateRangeEnd":        "",
-          "WellnessFetched":     0,
-          "WellnessUpserted":    0,
-          "ActivitiesFetched":   0,
-          "ActivitiesUpserted":  0,
-          "DurationMs":          0,
-          "Status":              "Success",
-          "ErrorMessage":        ""
-        }
-      },
-      "graphql": { "enabled": false },
-      "rest": {
-        "enabled": true,
-        "methods": [ "post" ]
-      },
-      "permissions": [
-        {
-          "role": "Authenticated",
-          "actions": [ "execute" ]
-        }
-      ]
-    },
     "IntervalsWellness": {
       "source": {
         "object": "dbo.IntervalsWellness",
@@ -281,3 +252,4 @@
     }
   }
 }
+

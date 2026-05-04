@@ -27,9 +27,10 @@ resource "null_resource" "upload_dab_config" {
   ]
 
   triggers = {
-    app_id    = azuread_application.dab_api.client_id
-    tenant_id = local.tenant_id
-    share_id  = azurerm_storage_share.dab.id
+    app_id        = azuread_application.dab_api.client_id
+    tenant_id     = local.tenant_id
+    share_id      = azurerm_storage_share.dab.id
+    template_hash = filemd5("${path.module}/templates/dab-config.json.tpl")
   }
 
   provisioner "local-exec" {

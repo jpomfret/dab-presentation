@@ -17,3 +17,12 @@ In this session, you’ll learn:
 - Practical scenarios where DAB simplifies data access for DBAs, analysts, and automation engineers
 
 Join me to see how DAB can streamline your workflows and unlock new ways of working with your data.
+
+## plan
+
+- what is dab
+- setup locally against sql container
+- setup in container app for postgres
+- call with powershell
+
+practical scenario

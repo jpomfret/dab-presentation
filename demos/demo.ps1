@@ -1,13 +1,13 @@
 <#
 
-app_registration_client_id = "4f4585ac-8558-4cee-86a9-75733d991305"
-app_registration_identifier_uri = "api://4f4585ac-8558-4cee-86a9-75733d991305"
-container_identity_principal_id = "c0e5dff3-db3c-47bd-a395-666437cd90c1"
+app_registration_client_id = "78fca3ef-71ec-44e7-b268-949d7e947466"
+app_registration_identifier_uri = "api://78fca3ef-71ec-44e7-b268-949d7e947466"
+container_identity_principal_id = "57d5a80d-7d16-4585-a00a-417a1331e3bc"
 dab_api_endpoint = "http://ci-dab-prod-001.uksouth.azurecontainer.io:5000/api"
 dab_swagger_url = "http://ci-dab-prod-001.uksouth.azurecontainer.io:5000/swagger"
 function_app_hostname = "func-dab-prod-001.azurewebsites.net"
-function_app_identity_principal_id = "692713d8-c4e1-42bf-bd8e-ea135b24ec5e"
-get_user_token_command = "az account get-access-token --resource 'api://4f4585ac-8558-4cee-86a9-75733d991305' | ConvertFrom-Json | Select-Object -ExpandProperty accessToken"
+function_app_identity_principal_id = "fe045b76-1754-4223-bb9f-013eaf598fb2"
+get_user_token_command = "az account get-access-token --resource 'api://78fca3ef-71ec-44e7-b268-949d7e947466' | ConvertFrom-Json | Select-Object -ExpandProperty accessToken"
 resource_group_name = "rg-dab-prod-001"
 sql_server_fqdn = "sqlsvr-dab-prod-001.database.windows.net"
 storage_account_name = "dabconfigstorage001"
@@ -28,11 +28,13 @@ $data.value
 # }
 
 ## auth
-$appID = '7f5ca04f-813d-44ea-8d45-4e09db07696c'
+$appID = '78fca3ef-71ec-44e7-b268-949d7e947466'
 $tenantId = 'f98042ad-9bbc-499d-adb4-17193696b9a3'
 az login --tenant $tenantId --scope "api://$appID/.default"
 
-$token = (az account get-access-token --resource "api://$appId" | ConvertFrom-Json).accessToken
+az login --tenant $tenantId --scope "api://$appID/.default"
+
+$token = (az account get-access-token --tenant $tenantId --resource "api://$appID" | ConvertFrom-Json).accessToken
 
 # Verify it's v1.0
 $tokenParts = $token.Split('.')
@@ -47,3 +49,35 @@ Write-Host "Issuer: $($tokenClaims.iss)"  # Should be https://sts.windows.net/te
 # Test the API
 $headers = @{ 'Authorization' = "Bearer $token" }
 Invoke-RestMethod -Uri 'http://ci-dab-prod-001.uksouth.azurecontainer.io:5000/api/dbo_BuildVersion' -Headers $headers
+
+
+
+$masterKey = (az functionapp keys list `
+  --resource-group rg-dab-prod-001 `
+  --name func-dab-prod-001 `
+  --query masterKey -o tsv)
+
+Invoke-RestMethod `
+  -Uri     'https://func-dab-prod-001.azurewebsites.net/admin/functions/IntervalsSync' `
+  -Method  Post `
+  -Headers @{ 'x-functions-key' = $masterKey } `
+  -ContentType 'application/json' `
+  -Body    '{}'
+
+# check for data in the database
+$token = (az account get-access-token --resource https://database.windows.net | ConvertFrom-Json).accessToken
+Invoke-Sqlcmd `
+  -ServerInstance (terraform output -raw sql_server_fqdn) `
+  -Database       sqldb-dab-prod-001 `
+  -AccessToken    $token `
+  -Query          "SELECT TOP 10 * FROM dbo.IntervalsWellness ORDER BY RecordDate DESC"
+
+# get data from database with dab
+$token = (az account get-access-token --resource "api://$appID" | ConvertFrom-Json).accessToken
+Invoke-RestMethod `
+  -Uri 'http://ci-dab-prod-001.uksouth.azurecontainer.io:5000/api/dbo_IntervalsWellness/Recent' `
+  -Headers @{ 'Authorization' = "Bearer $token" }
+
+
+Invoke-RestMethod 'http://ci-dab-prod-001.uksouth.azurecontainer.io:5000/api/IntervalsWellness' -Headers $headers
+Invoke-RestMethod 'http://ci-dab-prod-001.uksouth.azurecontainer.io:5000/api/IntervalsActivity' -Headers $headers
