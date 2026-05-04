@@ -47,8 +47,7 @@ resource "null_resource" "upload_dab_config" {
         --account-key  "${azurerm_storage_account.dab.primary_access_key}" `
         --share-name   "${var.file_share_name}" `
         --source       $tmpFile `
-        --path         "dab-config.json" `
-        --overwrite
+        --path         "dab-config.json"
       Remove-Item $tmpFile
       Write-Host "dab-config.json uploaded to file share."
     EOT
