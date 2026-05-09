@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chase the Sun — Training Dashboard</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌞</text></svg>">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" integrity="sha512-CQBWl4fJHWbryGE+Pc7UAxWMUMNMWzWxF4SQo9CgkJIN1kx6djDQZjh3Y8SZ1d+6I+1zze6Z7kHXO7q3UyZAWw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <style>
     :root {
       --bg:     #0f1117;
@@ -17,6 +18,24 @@
       --text:   #e2e8f0;
       --muted:  #64748b;
     }
+    [data-theme="light"] {
+      --bg:     #f1f5f9;
+      --card:   #ffffff;
+      --border: #e2e8f0;
+      --text:   #1e293b;
+      --muted:  #94a3b8;
+    }
+    .theme-toggle {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0.35rem 0.75rem;
+      line-height: 1;
+    }
+    .theme-toggle:hover { border-color: var(--accent); }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       background: var(--bg);
@@ -104,25 +123,26 @@
     .c-red    { color: var(--red);    }
     .c-yellow { color: var(--yellow); }
     .c-muted  { color: var(--muted);  }
+    .c-blue   { color: #3b82f6;       }
 
     .badge-green  { background: rgba(34,197,94,.15);  color: var(--green);  }
     .badge-yellow { background: rgba(234,179,8,.15);  color: var(--yellow); }
     .badge-red    { background: rgba(239,68,68,.15);  color: var(--red);    }
     .badge-orange { background: rgba(249,115,22,.15); color: var(--accent); }
+    .badge-blue   { background: rgba(59,130,246,.15); color: #3b82f6;       }
+    .badge-muted  { background: rgba(100,116,139,.15);color: var(--muted);  }
 
     #date-note { font-size: 0.75rem; color: var(--muted); margin-top: -0.5rem; margin-bottom: 1.5rem; }
 
-    /* ── Calorie table ───────────────────────────────────── */
-    .calorie-table { width: 100%; border-collapse: collapse; margin-bottom: 2.5rem; font-size: 0.875rem; }
-    .calorie-table th {
-      text-align: left; padding: 0.5rem 0.75rem;
-      font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em;
-      color: var(--muted); border-bottom: 1px solid var(--border);
+    /* ── Calorie chart ───────────────────────────────────── */
+    .chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2.5rem;
     }
-    .calorie-table td { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); }
-    .calorie-table tr:last-child td { border-bottom: none; }
-    .calorie-table tbody tr:hover { background: rgba(255,255,255,.03); }
-    .cal-total { font-weight: 700; color: var(--accent); }
+    .chart-wrap { position: relative; height: 260px; }
 
     /* ── Activity list ───────────────────────────────────── */
     .activities { display: flex; flex-direction: column; gap: 0.625rem; margin-bottom: 2rem; }
@@ -174,6 +194,7 @@
     🌞 Chase the <span>Sun</span>
     <small>June 20, 2026 &middot; Training Dashboard</small>
   </div>
+  <button class="theme-toggle" id="theme-btn" title="Toggle light/dark mode">☀️</button>
   <div class="countdown">
     <div class="cd-unit"><div class="cd-num" id="cd-d">--</div><div class="cd-lbl">days</div></div>
     <div class="cd-sep">:</div>
@@ -194,9 +215,11 @@
     <div class="card"><div class="loading">Loading&hellip;</div></div>
   </div>
 
-  <div class="section-heading">Calorie Intake</div>
-  <div id="calories-container">
-    <div class="loading">Loading&hellip;</div>
+  <div class="section-heading">Calorie Intake vs Expenditure</div>
+  <div class="chart-card">
+    <div class="chart-wrap">
+      <canvas id="calorie-chart"></canvas>
+    </div>
   </div>
 
   <div class="section-heading">Recent Activities</div>
@@ -236,13 +259,38 @@ function showError(msg) {
   el.textContent = msg; el.style.display = 'block';
 }
 
-// ── Wellness ──────────────────────────────────────────────────────────────────
-function formBadge(tsb) {
+// ── Wellness colour helpers ───────────────────────────────────────────────────
+function tsbColor(tsb) {
+  if (tsb == null)  return 'c-muted';
+  if (tsb < -30)    return 'c-red';
+  if (tsb < -10)    return 'c-green';
+  if (tsb <= 5)     return 'c-muted';
+  return 'c-blue';
+}
+function tsbBadge(tsb) {
   if (tsb == null) return '';
-  if (tsb >  10)   return '<span class="badge badge-green">Fresh</span>';
-  if (tsb >= -10)  return '<span class="badge badge-orange">Optimal</span>';
-  if (tsb >= -30)  return '<span class="badge badge-red">Fatigued</span>';
-  return '<span class="badge badge-red">Very Fatigued</span>';
+  if (tsb < -30)   return '<span class="badge badge-red">Very Fatigued</span>';
+  if (tsb < -10)   return '<span class="badge badge-green">Optimal</span>';
+  if (tsb <= 5)    return '<span class="badge badge-muted">Neutral</span>';
+  return '<span class="badge badge-blue">Fresh</span>';
+}
+function weightColor(kg) {
+  if (kg == null) return 'c-muted';
+  if (kg < 68.5)  return 'c-green';
+  if (kg < 70)    return 'c-accent';
+  return 'c-red';
+}
+function hrvColor(hrv) {
+  if (hrv == null)               return 'c-muted';
+  if (hrv >= 50  && hrv <= 110)  return 'c-green';
+  if (hrv >= 40  && hrv <= 120)  return 'c-accent';
+  return 'c-red';
+}
+function hrColor(hr) {
+  if (hr == null)              return 'c-muted';
+  if (hr >= 49 && hr <= 64)    return 'c-green';
+  if (hr >= 43 && hr <= 70)    return 'c-accent';
+  return 'c-red';
 }
 function optCard(label, value, unit, cls) {
   if (value == null) return '';
@@ -265,7 +313,6 @@ async function loadWellness() {
     const atl = w.ATL != null ? Math.round(w.ATL) : null;
     const tsb = ctl != null && atl != null ? ctl - atl : null;
     const tsbStr = tsb != null ? (tsb >= 0 ? '+' : '') + tsb : '—';
-    const tsbCls = tsb == null ? 'c-muted' : tsb > 5 ? 'c-green' : tsb >= -10 ? 'c-yellow' : 'c-red';
 
     if (w.RecordDate) {
       document.getElementById('date-note').textContent =
@@ -279,18 +326,18 @@ async function loadWellness() {
       </div>
       <div class="card">
         <div class="card-label">Fatigue (ATL)</div>
-        <div class="card-value c-yellow">${atl ?? '—'}</div>
+        <div class="card-value c-muted">${atl ?? '—'}</div>
         <div class="card-sub">Acute Training Load</div>
       </div>
       <div class="card">
         <div class="card-label">Form (TSB)</div>
-        <div class="card-value ${tsbCls}">${tsbStr}</div>
+        <div class="card-value ${tsbColor(tsb)}">${tsbStr}</div>
         <div class="card-sub">Training Stress Balance</div>
-        ${formBadge(tsb)}
+        ${tsbBadge(tsb)}
       </div>
-      ${optCard('Weight',     w.Weight,    'kg',  'c-accent')}
-      ${optCard('Resting HR', w.RestingHR, 'bpm', 'c-accent')}
-      ${optCard('HRV',        w.HRV,       'ms',  'c-green')}
+      ${optCard('Weight',     w.Weight,    'kg',  weightColor(w.Weight))}
+      ${optCard('Resting HR', w.RestingHR, 'bpm', hrColor(w.RestingHR))}
+      ${optCard('HRV',        w.HRV,       'ms',  hrvColor(w.HRV))}
     `;
   } catch(e) { showError(`Wellness: ${e.message}`); }
 }
@@ -331,38 +378,124 @@ async function loadActivities() {
   } catch(e) { showError(`Activities: ${e.message}`); }
 }
 
-// ── Calories ──────────────────────────────────────────────────────────────────
+// ── Theme toggle ──────────────────────────────────────────────────────────────
+(function() {
+  const saved = localStorage.getItem('theme') || 'dark';
+  if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+  document.getElementById('theme-btn').textContent = saved === 'light' ? '🌙' : '☀️';
+})();
+document.getElementById('theme-btn').addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', next === 'dark' ? '' : 'light');
+  document.getElementById('theme-btn').textContent = next === 'light' ? '🌙' : '☀️';
+  localStorage.setItem('theme', next);
+  if (window._calorieChart) {
+    updateChartTheme(window._calorieChart);
+    window._calorieChart.update();
+  }
+});
+
+function chartColors() {
+  const s = getComputedStyle(document.documentElement);
+  return {
+    text:   s.getPropertyValue('--text').trim()   || '#e2e8f0',
+    muted:  s.getPropertyValue('--muted').trim()  || '#64748b',
+    border: s.getPropertyValue('--border').trim() || '#2a2d3e',
+    card:   s.getPropertyValue('--card').trim()   || '#1a1d27',
+  };
+}
+
+function updateChartTheme(chart) {
+  const c = chartColors();
+  chart.options.scales.x.ticks.color  = c.muted;
+  chart.options.scales.x.grid.color   = c.border;
+  chart.options.scales.y.ticks.color  = c.muted;
+  chart.options.scales.y.grid.color   = c.border;
+  chart.options.plugins.legend.labels.color = c.text;
+}
+
+// ── Calories chart ────────────────────────────────────────────────────────────
 async function loadCalories() {
   try {
     const rows = await dabGet('/api/calories');
+    const canvas = document.getElementById('calorie-chart');
     if (!rows?.length) {
-      document.getElementById('calories-container').innerHTML =
-        '<div class="loading c-muted">No calorie data yet.</div>';
+      canvas.parentElement.innerHTML = '<div class="loading c-muted">No calorie data yet.</div>';
       return;
     }
-    const tableRows = rows.map(r => {
-      const dt = r.EntryDate
-        ? new Date(r.EntryDate).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' })
-        : '';
-      return `<tr>
-        <td>${dt}</td>
-        <td>${r.Breakfast ?? '—'}</td>
-        <td>${r.Lunch ?? '—'}</td>
-        <td>${r.Snack ?? '—'}</td>
-        <td>${r.Dinner ?? '—'}</td>
-        <td>${r.Workout ?? '—'}</td>
-        <td>${r.Bedtime ?? '—'}</td>
-        <td class="cal-total">${r.DailyTotal ?? '—'}</td>
-      </tr>`;
-    }).join('');
-    document.getElementById('calories-container').innerHTML = `
-      <table class="calorie-table">
-        <thead><tr>
-          <th>Date</th><th>Breakfast</th><th>Lunch</th><th>Snack</th>
-          <th>Dinner</th><th>Workout</th><th>Bedtime</th><th>Total</th>
-        </tr></thead>
-        <tbody>${tableRows}</tbody>
-      </table>`;
+
+    const labels      = rows.map(r => new Date(r.EntryDate).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' }));
+    const intakeData  = rows.map(r => r.DailyTotal       ?? 0);
+    const bmrData     = rows.map(r => r.BmrCalories      ?? 0);
+    const activeData  = rows.map(r => r.ActivityCalories ?? 0);
+
+    const c = chartColors();
+    const chart = new Chart(canvas, {
+      data: {
+        labels,
+        datasets: [
+          {
+            type: 'bar',
+            label: 'BMR',
+            data: bmrData,
+            backgroundColor: 'rgba(34,197,94,0.75)',
+            stack: 'burn',
+            order: 2,
+          },
+          {
+            type: 'bar',
+            label: 'Active',
+            data: activeData,
+            backgroundColor: 'rgba(249,115,22,0.85)',
+            stack: 'burn',
+            order: 2,
+          },
+          {
+            type: 'line',
+            label: 'Intake',
+            data: intakeData,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59,130,246,0.12)',
+            borderWidth: 2.5,
+            pointRadius: 4,
+            pointBackgroundColor: '#3b82f6',
+            tension: 0.3,
+            fill: false,
+            order: 1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: { color: c.text, usePointStyle: true, pointStyleWidth: 12, padding: 20 },
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()} kcal`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            stacked: true,
+            ticks:  { color: c.muted, maxRotation: 30 },
+            grid:   { color: c.border },
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            ticks:  { color: c.muted, callback: v => v.toLocaleString() },
+            grid:   { color: c.border },
+          },
+        },
+      },
+    });
+    window._calorieChart = chart;
   } catch(e) { showError(`Calories: ${e.message}`); }
 }
 

@@ -14,13 +14,33 @@ function httpGet(url) {
 
 module.exports = async function (context, req) {
     try {
-        const { status, body } = await httpGet(
-            `${DAB_BASE}/FuelGaugeCalories?$orderby=EntryDate%20desc&$first=14`
-        );
+        // Fetch intake and burn data in parallel, ordered oldest-first for charting
+        const [intakeRes, burnRes] = await Promise.all([
+            httpGet(`${DAB_BASE}/FuelGaugeCalories?$orderby=EntryDate%20asc&$first=14`),
+            httpGet(`${DAB_BASE}/FuelGaugeCalorieBurn?$orderby=EntryDate%20asc&$first=14`),
+        ]);
+
+        const intake = JSON.parse(intakeRes.body).value ?? [];
+        const burn   = JSON.parse(burnRes.body).value  ?? [];
+
+        // Index burn data by date for O(1) lookup
+        const burnByDate = {};
+        for (const row of burn) {
+            burnByDate[row.EntryDate] = row;
+        }
+
+        // Merge: every intake row gets the matching burn figures (or zeros)
+        const merged = intake.map(row => ({
+            EntryDate:        row.EntryDate,
+            DailyTotal:       row.DailyTotal       ?? 0,
+            BmrCalories:      burnByDate[row.EntryDate]?.BmrCalories      ?? 0,
+            ActivityCalories: burnByDate[row.EntryDate]?.ActivityCalories  ?? 0,
+        }));
+
         context.res = {
-            status,
+            status: 200,
             headers: { 'Content-Type': 'application/json' },
-            body,
+            body: JSON.stringify({ value: merged }),
         };
     } catch (err) {
         context.res = {

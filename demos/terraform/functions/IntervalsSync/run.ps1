@@ -144,6 +144,7 @@ try {
     $triggerType = if ($Timer.IsPastDue) { 'Manual' } else { 'Timer' }
 
     $logBody = @{
+        Source             = 'IntervalsSync'
         TriggerType        = $triggerType
         DateRangeStart     = $weekAgo
         DateRangeEnd       = $today

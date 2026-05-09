@@ -124,8 +124,9 @@ resource "null_resource" "fuelgauge_calories" {
   ]
 
   triggers = {
-    database_id      = azurerm_mssql_database.dab.id
-    calories_sp_hash = filemd5("${path.module}/templates/usp_UpsertCalories.sql")
+    database_id          = azurerm_mssql_database.dab.id
+    calories_sp_hash     = filemd5("${path.module}/templates/usp_UpsertCalories.sql")
+    calorie_burn_sp_hash = filemd5("${path.module}/templates/usp_UpsertCalorieBurn.sql")
   }
 
   provisioner "local-exec" {
@@ -137,11 +138,12 @@ resource "null_resource" "fuelgauge_calories" {
       $db     = "${var.sql_database_name}"
 
       Invoke-Sqlcmd -ServerInstance $server -Database $db -AccessToken $token -InputFile "${path.module}/templates/usp_UpsertCalories.sql"
+      Invoke-Sqlcmd -ServerInstance $server -Database $db -AccessToken $token -InputFile "${path.module}/templates/usp_UpsertCalorieBurn.sql"
 
-      # Grant the DAB container MI EXECUTE on the stored procedure
-      Invoke-Sqlcmd -ServerInstance $server -Database $db -AccessToken $token -Query "GRANT EXECUTE ON dbo.usp_UpsertCalories TO [${var.container_name}];"
+      # Grant the DAB container MI EXECUTE on both stored procedures
+      Invoke-Sqlcmd -ServerInstance $server -Database $db -AccessToken $token -Query "GRANT EXECUTE ON dbo.usp_UpsertCalories TO [${var.container_name}]; GRANT EXECUTE ON dbo.usp_UpsertCalorieBurn TO [${var.container_name}];"
 
-      Write-Host "FuelGaugeCalories table and stored procedure created."
+      Write-Host "FuelGaugeCalories and FuelGaugeCalorieBurn tables and stored procedures created."
     EOT
   }
 }

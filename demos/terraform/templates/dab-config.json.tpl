@@ -56,81 +56,6 @@
         }
       ]
     },
-    "SalesLT_Customer": {
-      "source": {
-        "object": "SalesLT.Customer",
-        "type": "table"
-      },
-      "graphql": {
-        "enabled": true,
-        "type": {
-          "singular": "SalesLT_Customer",
-          "plural": "SalesLT_Customers"
-        }
-      },
-      "rest": {
-        "enabled": true
-      },
-      "permissions": [
-        {
-          "role": "Authenticated",
-          "actions": [
-            { "action": "read" },
-            { "action": "create" }
-          ]
-        }
-      ]
-    },
-    "SalesLT_Product": {
-      "source": {
-        "object": "SalesLT.Product",
-        "type": "table"
-      },
-      "graphql": {
-        "enabled": true,
-        "type": {
-          "singular": "SalesLT_Product",
-          "plural": "SalesLT_Products"
-        }
-      },
-      "rest": {
-        "enabled": true
-      },
-      "permissions": [
-        {
-          "role": "Authenticated",
-          "actions": [
-            { "action": "read" },
-            { "action": "create" }
-          ]
-        }
-      ]
-    },
-    "SalesLT_SalesOrderHeader": {
-      "source": {
-        "object": "SalesLT.SalesOrderHeader",
-        "type": "table"
-      },
-      "graphql": {
-        "enabled": true,
-        "type": {
-          "singular": "SalesLT_SalesOrderHeader",
-          "plural": "SalesLT_SalesOrderHeaders"
-        }
-      },
-      "rest": {
-        "enabled": true
-      },
-      "permissions": [
-        {
-          "role": "Authenticated",
-          "actions": [
-            { "action": "read" },
-            { "action": "create" }
-          ]
-        }
-      ]
-    },
     "UpsertWellness": {
       "source": {
         "object": "dbo.usp_UpsertWellness",
@@ -203,7 +128,8 @@
         "object": "dbo.usp_LogSync",
         "type": "stored-procedure",
         "parameters": {
-          "TriggerType":         "Timer",
+          "Source":              "Unknown",
+          "TriggerType":         "Unknown",
           "DateRangeStart":      "",
           "DateRangeEnd":        "",
           "WellnessFetched":     0,
@@ -224,6 +150,28 @@
         {
           "role": "Authenticated",
           "actions": [ "execute" ]
+        }
+      ]
+    },
+    "SyncLog": {
+      "source": {
+        "object": "dbo.SyncLog",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "SyncLog",
+          "plural": "SyncLogList"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "Authenticated",
+          "actions": [ { "action": "read" } ]
         }
       ]
     },
@@ -303,6 +251,54 @@
         {
           "role": "Authenticated",
           "actions": [ "execute" ]
+        }
+      ]
+    },
+    "UpsertCalorieBurn": {
+      "source": {
+        "object": "dbo.usp_UpsertCalorieBurn",
+        "type": "stored-procedure",
+        "parameters": {
+          "EntryDate":        "2000-01-01",
+          "BmrCalories":      0,
+          "ActivityCalories": 0
+        }
+      },
+      "graphql": { "enabled": false },
+      "rest": {
+        "enabled": true,
+        "methods": [ "post" ]
+      },
+      "permissions": [
+        {
+          "role": "Authenticated",
+          "actions": [ "execute" ]
+        }
+      ]
+    },
+    "FuelGaugeCalorieBurn": {
+      "source": {
+        "object": "dbo.FuelGaugeCalorieBurn",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "FuelGaugeCalorieBurn",
+          "plural": "FuelGaugeCalorieBurnList"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ { "action": "read" } ]
+        },
+        {
+          "role": "Authenticated",
+          "actions": [ { "action": "read" } ]
         }
       ]
     },

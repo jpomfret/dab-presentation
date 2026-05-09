@@ -1,5 +1,10 @@
-<svg width="1000" height="500" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
+<svg width="1000" height="660" viewBox="0 0 1000 660" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" role="img">
+  <title>Chase the Sun — Architecture</title>
+  <desc>Architecture diagram showing Data API Builder as the central data access layer, with intervals.icu feeding an Azure Function, FuelGauge feeding a Kubernetes CronJob, both writing to DAB via authenticated REST, DAB reading/writing Azure SQL, and a Static Web App serving the dashboard to the browser.</desc>
   <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
+    </marker>
     <marker id="arr-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
       <polygon points="0 0, 10 3.5, 0 7" fill="#ea6d07"/>
     </marker>
@@ -9,91 +14,133 @@
     <marker id="arr-muted" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
       <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
     </marker>
+    <marker id="arr-orange2" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#ea6d07"/>
+    </marker>
   </defs>
 
   <!-- Background -->
-  <rect width="1000" height="500" fill="#f8fafc"/>
+  <rect width="1000" height="660" fill="#f8fafc"/>
 
   <!-- Title -->
-  <text x="500" y="34" text-anchor="middle" fill="#0f172a" font-size="18" font-weight="700">Chase the Sun — Architecture</text>
-  <text x="500" y="52" text-anchor="middle" fill="#64748b" font-size="11">Data API Builder as the central data access layer</text>
+  <text x="500" y="34" text-anchor="middle" fill="#1e293b" font-size="18" font-weight="700">Chase the Sun — Architecture</text>
+  <text x="500" y="52" text-anchor="middle" fill="#94a3b8" font-size="11">Data API Builder as the central data access layer</text>
 
   <!-- ═══════════════ LEFT: intervals.icu ═══════════════ -->
-  <rect x="35" y="72" width="175" height="78" rx="10" fill="#ffffff" stroke="#ea6d07" stroke-width="1.5"/>
+  <rect x="35" y="72" width="175" height="78" rx="10" fill="#fff" stroke="#f97316" stroke-width="1.5"/>
   <text x="122" y="101" text-anchor="middle" font-size="22">⏱️</text>
-  <text x="122" y="122" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="600">intervals.icu</text>
-  <text x="122" y="139" text-anchor="middle" fill="#64748b" font-size="10">Training Data API</text>
+  <text x="122" y="122" text-anchor="middle" fill="#1e293b" font-size="13" font-weight="600">intervals.icu</text>
+  <text x="122" y="139" text-anchor="middle" fill="#94a3b8" font-size="10">Training Data API</text>
 
   <!-- Arrow down: intervals.icu → Function -->
-  <line x1="122" y1="150" x2="122" y2="192" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr-muted)"/>
+  <line x1="122" y1="150" x2="122" y2="192" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arr-muted)"/>
 
   <!-- ═══════════════ LEFT: Azure Function ═══════════════ -->
-  <rect x="35" y="192" width="175" height="88" rx="10" fill="#ffffff" stroke="#0078d4" stroke-width="1.5"/>
+  <rect x="35" y="192" width="175" height="88" rx="10" fill="#fff" stroke="#0078d4" stroke-width="1.5"/>
   <text x="122" y="222" text-anchor="middle" font-size="22">⚡</text>
-  <text x="122" y="244" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="600">Azure Function</text>
-  <text x="122" y="261" text-anchor="middle" fill="#64748b" font-size="10">IntervalsSync · Timer Trigger</text>
-  <text x="122" y="274" text-anchor="middle" fill="#64748b" font-size="10">PowerShell · Managed Identity</text>
+  <text x="122" y="244" text-anchor="middle" fill="#1e293b" font-size="13" font-weight="600">Azure Function</text>
+  <text x="122" y="261" text-anchor="middle" fill="#94a3b8" font-size="10">IntervalsSync · Timer Trigger</text>
+  <text x="122" y="274" text-anchor="middle" fill="#94a3b8" font-size="10">PowerShell · Managed Identity</text>
 
   <!-- Arrow right: Function → DAB (write) -->
-  <line x1="210" y1="236" x2="382" y2="236" stroke="#ea6d07" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#arr-orange)"/>
-  <text x="296" y="226" text-anchor="middle" fill="#ea6d07" font-size="10" font-weight="600">POST /api/Upsert*</text>
-  <text x="296" y="254" text-anchor="middle" fill="#64748b" font-size="9">Authenticated (Entra JWT)</text>
+  <line x1="210" y1="222" x2="382" y2="210" stroke="#ea6d07" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#arr-orange)"/>
+  <text x="296" y="210" text-anchor="middle" fill="#ea6d07" font-size="10" font-weight="600">POST /api/Upsert*</text>
+  <text x="296" y="234" text-anchor="middle" fill="#94a3b8" font-size="9">Authenticated (Entra JWT)</text>
 
   <!-- ═══════════════ CENTER: DAB Container ═══════════════ -->
-  <rect x="382" y="178" width="212" height="102" rx="12" fill="#ffffff" stroke="#7c3aed" stroke-width="2"/>
+  <rect x="382" y="178" width="212" height="102" rx="12" fill="#fff" stroke="#8b5cf6" stroke-width="2"/>
   <text x="488" y="212" text-anchor="middle" font-size="24">🔌</text>
-  <text x="488" y="236" text-anchor="middle" fill="#0f172a" font-size="15" font-weight="700">Data API Builder</text>
-  <text x="488" y="254" text-anchor="middle" fill="#64748b" font-size="10">REST · GraphQL · ACI Container</text>
-  <text x="488" y="268" text-anchor="middle" fill="#64748b" font-size="10">Entra JWT Auth · Anonymous Read</text>
+  <text x="488" y="236" text-anchor="middle" fill="#1e293b" font-size="15" font-weight="700">Data API Builder</text>
+  <text x="488" y="254" text-anchor="middle" fill="#94a3b8" font-size="10">REST · GraphQL · ACI Container</text>
+  <text x="488" y="268" text-anchor="middle" fill="#94a3b8" font-size="10">Entra JWT Auth · Anonymous Read</text>
 
   <!-- Arrows: DAB ↔ SQL (bidirectional) -->
-  <line x1="478" y1="280" x2="478" y2="342" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr-muted)"/>
-  <line x1="498" y1="342" x2="498" y2="282" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr-muted)"/>
+  <line x1="478" y1="280" x2="478" y2="348" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arr-muted)"/>
+  <line x1="498" y1="348" x2="498" y2="282" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arr-muted)"/>
 
   <!-- ═══════════════ CENTER: Azure SQL ═══════════════ -->
-  <rect x="385" y="342" width="206" height="95" rx="10" fill="#ffffff" stroke="#0078d4" stroke-width="1.5"/>
-  <text x="488" y="372" text-anchor="middle" font-size="22">🗄️</text>
-  <text x="488" y="395" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="600">Azure SQL Database</text>
-  <text x="488" y="412" text-anchor="middle" fill="#64748b" font-size="10">IntervalsWellness · IntervalsActivity</text>
-  <text x="488" y="426" text-anchor="middle" fill="#64748b" font-size="10">SyncLog · AdventureWorksLT</text>
+  <rect x="385" y="348" width="206" height="110" rx="10" fill="#fff" stroke="#0078d4" stroke-width="1.5"/>
+  <text x="488" y="376" text-anchor="middle" font-size="22">🗄️</text>
+  <text x="488" y="398" text-anchor="middle" fill="#1e293b" font-size="13" font-weight="600">Azure SQL Database</text>
+  <text x="488" y="415" text-anchor="middle" fill="#94a3b8" font-size="10">IntervalsWellness · IntervalsActivity</text>
+  <text x="488" y="430" text-anchor="middle" fill="#94a3b8" font-size="10">FuelGaugeCalories · FuelGaugeCalorieBurn</text>
+  <text x="488" y="445" text-anchor="middle" fill="#94a3b8" font-size="10">SyncLog · AdventureWorksLT</text>
 
   <!-- Arrow right: DAB → SWA (read) -->
   <line x1="594" y1="236" x2="762" y2="236" stroke="#16a34a" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#arr-green)"/>
   <text x="678" y="226" text-anchor="middle" fill="#16a34a" font-size="10" font-weight="600">GET /api/Intervals*</text>
-  <text x="678" y="254" text-anchor="middle" fill="#64748b" font-size="9">Anonymous · SWA Proxy</text>
+  <text x="678" y="254" text-anchor="middle" fill="#94a3b8" font-size="9">Anonymous · SWA Proxy</text>
 
   <!-- ═══════════════ RIGHT: Static Web App ═══════════════ -->
-  <rect x="762" y="178" width="205" height="102" rx="10" fill="#ffffff" stroke="#16a34a" stroke-width="1.5"/>
+  <rect x="762" y="178" width="205" height="102" rx="10" fill="#fff" stroke="#16a34a" stroke-width="1.5"/>
   <text x="864" y="212" text-anchor="middle" font-size="22">🌐</text>
-  <text x="864" y="236" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="600">Static Web App</text>
-  <text x="864" y="254" text-anchor="middle" fill="#64748b" font-size="10">Chase the Sun Dashboard</text>
-  <text x="864" y="268" text-anchor="middle" fill="#64748b" font-size="10">Node.js API Proxy Functions</text>
+  <text x="864" y="236" text-anchor="middle" fill="#1e293b" font-size="13" font-weight="600">Static Web App</text>
+  <text x="864" y="254" text-anchor="middle" fill="#94a3b8" font-size="10">Chase the Sun Dashboard</text>
+  <text x="864" y="268" text-anchor="middle" fill="#94a3b8" font-size="10">Node.js API Proxy Functions</text>
 
   <!-- Arrow up: SWA → Browser -->
-  <line x1="864" y1="178" x2="864" y2="153" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr-muted)"/>
+  <line x1="864" y1="178" x2="864" y2="153" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arr-muted)"/>
 
   <!-- ═══════════════ RIGHT: Browser ═══════════════ -->
-  <rect x="762" y="74" width="205" height="78" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <rect x="762" y="74" width="205" height="78" rx="10" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/>
   <text x="864" y="103" text-anchor="middle" font-size="22">💻</text>
-  <text x="864" y="124" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="600">Browser</text>
-  <text x="864" y="141" text-anchor="middle" fill="#64748b" font-size="9">blue-mud-0e8339c03.7.azurestaticapps.net</text>
+  <text x="864" y="124" text-anchor="middle" fill="#1e293b" font-size="13" font-weight="600">Browser</text>
+  <text x="864" y="141" text-anchor="middle" fill="#94a3b8" font-size="9">blue-mud-0e8339c03.7.azurestaticapps.net</text>
 
-  <!-- ═══════════════ Storage (below, small) ═══════════════ -->
-  <rect x="210" y="360" width="148" height="60" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="284" y="385" text-anchor="middle" font-size="16">📦</text>
-  <text x="284" y="403" text-anchor="middle" fill="#0f172a" font-size="11" font-weight="600">Azure Storage</text>
-  <text x="284" y="416" text-anchor="middle" fill="#64748b" font-size="9">dab-config.json file share</text>
+  <!-- ═══════════════ Storage (below function, small) ═══════════════ -->
+  <rect x="210" y="362" width="148" height="60" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="284" y="387" text-anchor="middle" font-size="16">📦</text>
+  <text x="284" y="405" text-anchor="middle" fill="#1e293b" font-size="11" font-weight="600">Azure Storage</text>
+  <text x="284" y="418" text-anchor="middle" fill="#94a3b8" font-size="9">dab-config.json file share</text>
 
   <!-- Arrow: Storage → DAB (config mount) -->
-  <line x1="358" y1="385" x2="383" y2="300" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-muted)"/>
-  <text x="388" y="348" fill="#94a3b8" font-size="9">config mount</text>
+  <line x1="358" y1="378" x2="383" y2="300" stroke="#e2e8f0" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+  <text x="390" y="348" fill="#cbd5e1" font-size="9">config mount</text>
+
+  <!-- ═══════════════ KUBERNETES CLUSTER (bottom) ═══════════════ -->
+  <rect x="30" y="490" width="520" height="148" rx="14" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="8,4"/>
+  <text x="290" y="510" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="600" letter-spacing="1">KUBERNETES  ·  AKS / FuelGauge</text>
+
+  <!-- InfluxDB node -->
+  <rect x="50" y="520" width="145" height="88" rx="10" fill="#fff" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="122" y="550" text-anchor="middle" font-size="20">📊</text>
+  <text x="122" y="572" text-anchor="middle" fill="#1e293b" font-size="12" font-weight="600">InfluxDB</text>
+  <text x="122" y="588" text-anchor="middle" fill="#94a3b8" font-size="9">GarminStats</text>
+  <text x="122" y="601" text-anchor="middle" fill="#94a3b8" font-size="9">BMR · Active Calories</text>
+
+  <!-- Postgres node -->
+  <rect x="220" y="520" width="145" height="88" rx="10" fill="#fff" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="292" y="550" text-anchor="middle" font-size="20">🐘</text>
+  <text x="292" y="572" text-anchor="middle" fill="#1e293b" font-size="12" font-weight="600">PostgreSQL</text>
+  <text x="292" y="588" text-anchor="middle" fill="#94a3b8" font-size="9">fuelgaugedb</text>
+  <text x="292" y="601" text-anchor="middle" fill="#94a3b8" font-size="9">calorie_entries</text>
+
+  <!-- CronJob node -->
+  <rect x="390" y="520" width="145" height="88" rx="10" fill="#fff" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text x="462" y="550" text-anchor="middle" font-size="20">⏲️</text>
+  <text x="462" y="572" text-anchor="middle" fill="#1e293b" font-size="12" font-weight="600">CronJob</text>
+  <text x="462" y="588" text-anchor="middle" fill="#94a3b8" font-size="9">CalorieSync · 06:15 &amp; 18:15 UTC</text>
+  <text x="462" y="601" text-anchor="middle" fill="#94a3b8" font-size="9">Workload Identity</text>
+
+  <!-- Arrow: InfluxDB → CronJob -->
+  <line x1="195" y1="564" x2="388" y2="564" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arr-muted)"/>
+
+  <!-- Arrow: Postgres → CronJob -->
+  <line x1="365" y1="572" x2="388" y2="572" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arr-muted)"/>
+
+  <!-- Arrow: CronJob → DAB (write path) -->
+  <path d="M462,520 L462,440 L488,440 L488,282" fill="none" stroke="#ea6d07" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#arr-orange2)"/>
+  <text x="530" y="435" fill="#ea6d07" font-size="10" font-weight="600">POST /api/UpsertCalories*</text>
+  <text x="530" y="450" fill="#94a3b8" font-size="9">Authenticated (Entra JWT)</text>
 
   <!-- ═══════════════ Legend ═══════════════ -->
-  <rect x="315" y="455" width="370" height="34" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
-  <line x1="335" y1="472" x2="365" y2="472" stroke="#ea6d07" stroke-width="2" stroke-dasharray="5,3"/>
-  <text x="372" y="476" fill="#64748b" font-size="10">write path</text>
-  <line x1="450" y1="472" x2="480" y2="472" stroke="#16a34a" stroke-width="2" stroke-dasharray="5,3"/>
-  <text x="487" y="476" fill="#64748b" font-size="10">read path</text>
-  <line x1="558" y1="472" x2="588" y2="472" stroke="#94a3b8" stroke-width="1.5"/>
-  <text x="595" y="476" fill="#64748b" font-size="10">infrastructure</text>
+  <rect x="280" y="614" width="440" height="34" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
+  <line x1="300" y1="631" x2="330" y2="631" stroke="#ea6d07" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="337" y="635" fill="#94a3b8" font-size="10">write path</text>
+  <line x1="415" y1="631" x2="445" y2="631" stroke="#16a34a" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="452" y="635" fill="#94a3b8" font-size="10">read path</text>
+  <line x1="530" y1="631" x2="560" y2="631" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="567" y="635" fill="#94a3b8" font-size="10">infrastructure</text>
+  <line x1="650" y1="631" x2="680" y2="631" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="687" y="635" fill="#94a3b8" font-size="10">k8s cluster</text>
 </svg>
