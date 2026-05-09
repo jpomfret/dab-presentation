@@ -87,3 +87,17 @@ resource "azuread_app_role_assignment" "function_dab_access" {
   principal_object_id = azurerm_windows_function_app.dab.identity[0].principal_id
   resource_object_id  = azuread_service_principal.dab_api.object_id
 }
+
+# Assign the DAB.Access app role to the FuelGauge workload identity managed identity.
+# This lets the Kubernetes CronJob running as workload-identity-sa acquire a token
+# and POST calorie data to the DAB UpsertCalories endpoint.
+#
+# To find the principal_object_id:
+#   az aks show -g <aks-rg> -n <aks-name> --query "identityProfile.kubeletidentity.objectId" -o tsv
+# or, if using a User-Assigned MI for workload identity:
+#   az identity show -g <rg> -n <mi-name> --query principalId -o tsv
+resource "azuread_app_role_assignment" "fuelgauge_dab_access" {
+  app_role_id         = random_uuid.app_role_id.result
+  principal_object_id = var.fuelgauge_workload_identity_principal_id
+  resource_object_id  = azuread_service_principal.dab_api.object_id
+}

@@ -20,6 +20,10 @@ sql_admin_password = "Change_Me_Str0ng!"
 # container_dns_label  = "ci-dab-prod-001"       # must be globally unique in region
 # function_app_name    = "func-dab-prod-001"
 
+# FuelGauge calorie sync — object ID of the managed identity used by workload-identity-sa in AKS
+# az identity show -g <aks-node-rg> -n <mi-name> --query principalId -o tsv
+fuelgauge_workload_identity_principal_id = "00000000-0000-0000-0000-000000000000"
+
 # Intervals.icu sync — generate your API key at intervals.icu /settings
 # Use "0" for intervals_athlete_id to resolve to the key owner automatically
 intervals_athlete_id = "0"

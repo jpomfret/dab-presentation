@@ -278,6 +278,59 @@
           "actions": [ { "action": "read" } ]
         }
       ]
+    },
+    "UpsertCalories": {
+      "source": {
+        "object": "dbo.usp_UpsertCalories",
+        "type": "stored-procedure",
+        "parameters": {
+          "EntryDate":  "2000-01-01",
+          "DailyTotal": 0,
+          "Breakfast":  0,
+          "Lunch":      0,
+          "Snack":      0,
+          "Dinner":     0,
+          "Workout":    0,
+          "Bedtime":    0
+        }
+      },
+      "graphql": { "enabled": false },
+      "rest": {
+        "enabled": true,
+        "methods": [ "post" ]
+      },
+      "permissions": [
+        {
+          "role": "Authenticated",
+          "actions": [ "execute" ]
+        }
+      ]
+    },
+    "FuelGaugeCalories": {
+      "source": {
+        "object": "dbo.FuelGaugeCalories",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "FuelGaugeCalories",
+          "plural": "FuelGaugeCaloriesList"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ { "action": "read" } ]
+        },
+        {
+          "role": "Authenticated",
+          "actions": [ { "action": "read" } ]
+        }
+      ]
     }
   }
 }

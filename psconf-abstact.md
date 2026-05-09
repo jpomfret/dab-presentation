@@ -1,6 +1,6 @@
 # Persist Your PowerShell Script Data with Data API Builder
 
-Tuesday, 2 Jun 2026 2:00 pm - 2:45 pm 
+Tuesday, 2 Jun 2026 2:00 pm - 2:45 pm
 (45 minutes)
 Room 2
 

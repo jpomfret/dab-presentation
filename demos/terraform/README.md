@@ -29,10 +29,10 @@ Copy-Item terraform.tfvars.example terraform.tfvars
 terraform init
 
 # 3. Review the plan
-terraform plan
+terraform plan -out 'plan.tfplan'
 
 # 4. Apply (takes ~5-10 minutes)
-terraform apply
+terraform apply "plan.tfplan"
 ```
 
 After apply, the outputs include the DAB API endpoint, Swagger URL, and a ready-to-paste PowerShell command to get a user token for testing.

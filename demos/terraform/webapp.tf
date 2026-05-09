@@ -6,6 +6,12 @@ resource "azurerm_static_web_app" "dashboard" {
   location            = "westeurope"
   sku_tier            = "Free"
   sku_size            = "Free"
+
+  # Manage app settings declaratively so Terraform never removes them on a
+  # plan that doesn't touch deploy_dashboard.
+  app_settings = {
+    DAB_ENDPOINT = "${local.dab_endpoint}/api"
+  }
 }
 
 # Register the SWA URL (and localhost for local testing) as SPA redirect URIs
@@ -32,36 +38,12 @@ resource "null_resource" "dashboard_redirect_uris" {
   }
 }
 
-# Set the DAB_ENDPOINT app setting so the SWA API proxy functions can reach DAB.
-# Must run AFTER deploy_dashboard — the SWA CLI deploy can reset managed function
-# environment variables, so we apply settings last.
-resource "null_resource" "swa_app_settings" {
-  depends_on = [
-    azurerm_static_web_app.dashboard,
-    null_resource.deploy_dashboard,
-  ]
-
-  triggers = {
-    swa_name     = azurerm_static_web_app.dashboard.name
-    dab_endpoint = local.dab_endpoint
-    deploy_id    = null_resource.deploy_dashboard.id
-  }
-
-  provisioner "local-exec" {
-    interpreter = ["PowerShell", "-Command"]
-    command     = <<-EOT
-      $ErrorActionPreference = 'Stop'
-      az staticwebapp appsettings set `
-        --name "${azurerm_static_web_app.dashboard.name}" `
-        --resource-group "${var.resource_group_name}" `
-        --setting-names "DAB_ENDPOINT=${local.dab_endpoint}/api"
-      Write-Host "SWA app setting DAB_ENDPOINT set."
-    EOT
-  }
-}
-
-# Render the HTML template (substitute placeholders) and deploy to the SWA
-# using the SWA CLI. Re-runs whenever the dashboard HTML or API functions change.
+# Render the HTML template (substitute placeholders), deploy to the SWA via the
+# SWA CLI, and apply the DAB_ENDPOINT app setting in a single step.
+# Keeping deploy and appsettings in one resource avoids a destroy-phase cycle
+# that arises when two null_resources depend on each other (the SWA CLI deploy
+# resets managed function environment variables, so the setting must be applied
+# after deploy — merging them guarantees that without any inter-resource edge).
 resource "null_resource" "deploy_dashboard" {
   depends_on = [
     azurerm_static_web_app.dashboard,
@@ -69,12 +51,14 @@ resource "null_resource" "deploy_dashboard" {
   ]
 
   triggers = {
-    html_hash             = filemd5("${path.module}/dashboard/index.html")
-    wellness_index_hash   = filemd5("${path.module}/dashboard/api/wellness/index.js")
-    wellness_binding_hash = filemd5("${path.module}/dashboard/api/wellness/function.json")
-    activities_index_hash = filemd5("${path.module}/dashboard/api/activities/index.js")
+    html_hash               = filemd5("${path.module}/dashboard/index.html")
+    wellness_index_hash     = filemd5("${path.module}/dashboard/api/wellness/index.js")
+    wellness_binding_hash   = filemd5("${path.module}/dashboard/api/wellness/function.json")
+    activities_index_hash   = filemd5("${path.module}/dashboard/api/activities/index.js")
     activities_binding_hash = filemd5("${path.module}/dashboard/api/activities/function.json")
-    swa_name              = azurerm_static_web_app.dashboard.name
+    calories_index_hash     = filemd5("${path.module}/dashboard/api/calories/index.js")
+    calories_binding_hash   = filemd5("${path.module}/dashboard/api/calories/function.json")
+    swa_name                = azurerm_static_web_app.dashboard.name
   }
 
   provisioner "local-exec" {
@@ -83,7 +67,7 @@ resource "null_resource" "deploy_dashboard" {
       $ErrorActionPreference = 'Stop'
 
       # Render template — substitute placeholders
-      $content = Get-Content "${path.module}/dashboard/index.html" -Raw
+      $content = Get-Content "${path.module}/dashboard/index.html" -Raw -Encoding UTF8
       $content = $content -replace '__APP_ID__',     '${azuread_application.dab_api.client_id}'
       $content = $content -replace '__TENANT_ID__',  '${local.tenant_id}'
 

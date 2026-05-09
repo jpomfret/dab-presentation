@@ -106,6 +106,13 @@ variable "app_insights_name" {
   default     = "appi-dab-prod-001"
 }
 
+# FuelGauge
+
+variable "fuelgauge_workload_identity_principal_id" {
+  description = "Object ID of the managed identity attached to workload-identity-sa in AKS (the FuelGauge calorie-sync job authenticates to DAB as this identity). Find it with: az identity show -g <rg> -n <mi-name> --query principalId -o tsv"
+  type        = string
+}
+
 # Intervals.icu
 
 variable "intervals_athlete_id" {

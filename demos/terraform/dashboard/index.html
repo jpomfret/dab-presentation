@@ -112,6 +112,18 @@
 
     #date-note { font-size: 0.75rem; color: var(--muted); margin-top: -0.5rem; margin-bottom: 1.5rem; }
 
+    /* ── Calorie table ───────────────────────────────────── */
+    .calorie-table { width: 100%; border-collapse: collapse; margin-bottom: 2.5rem; font-size: 0.875rem; }
+    .calorie-table th {
+      text-align: left; padding: 0.5rem 0.75rem;
+      font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--muted); border-bottom: 1px solid var(--border);
+    }
+    .calorie-table td { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); }
+    .calorie-table tr:last-child td { border-bottom: none; }
+    .calorie-table tbody tr:hover { background: rgba(255,255,255,.03); }
+    .cal-total { font-weight: 700; color: var(--accent); }
+
     /* ── Activity list ───────────────────────────────────── */
     .activities { display: flex; flex-direction: column; gap: 0.625rem; margin-bottom: 2rem; }
     .activity-row {
@@ -180,6 +192,11 @@
   <p id="date-note"></p>
   <div class="wellness-grid" id="wellness-grid">
     <div class="card"><div class="loading">Loading&hellip;</div></div>
+  </div>
+
+  <div class="section-heading">Calorie Intake</div>
+  <div id="calories-container">
+    <div class="loading">Loading&hellip;</div>
   </div>
 
   <div class="section-heading">Recent Activities</div>
@@ -314,7 +331,43 @@ async function loadActivities() {
   } catch(e) { showError(`Activities: ${e.message}`); }
 }
 
+// ── Calories ──────────────────────────────────────────────────────────────────
+async function loadCalories() {
+  try {
+    const rows = await dabGet('/api/calories');
+    if (!rows?.length) {
+      document.getElementById('calories-container').innerHTML =
+        '<div class="loading c-muted">No calorie data yet.</div>';
+      return;
+    }
+    const tableRows = rows.map(r => {
+      const dt = r.EntryDate
+        ? new Date(r.EntryDate).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' })
+        : '';
+      return `<tr>
+        <td>${dt}</td>
+        <td>${r.Breakfast ?? '—'}</td>
+        <td>${r.Lunch ?? '—'}</td>
+        <td>${r.Snack ?? '—'}</td>
+        <td>${r.Dinner ?? '—'}</td>
+        <td>${r.Workout ?? '—'}</td>
+        <td>${r.Bedtime ?? '—'}</td>
+        <td class="cal-total">${r.DailyTotal ?? '—'}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('calories-container').innerHTML = `
+      <table class="calorie-table">
+        <thead><tr>
+          <th>Date</th><th>Breakfast</th><th>Lunch</th><th>Snack</th>
+          <th>Dinner</th><th>Workout</th><th>Bedtime</th><th>Total</th>
+        </tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>`;
+  } catch(e) { showError(`Calories: ${e.message}`); }
+}
+
 loadWellness();
+loadCalories();
 loadActivities();
 </script>
 </body>

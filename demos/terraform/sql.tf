@@ -115,3 +115,33 @@ resource "null_resource" "intervals_tables" {
     EOT
   }
 }
+
+# Create the FuelGaugeCalories table and stored procedure.
+# Re-runs if the SP file changes or the database is recreated.
+resource "null_resource" "fuelgauge_calories" {
+  depends_on = [
+    null_resource.intervals_tables,
+  ]
+
+  triggers = {
+    database_id      = azurerm_mssql_database.dab.id
+    calories_sp_hash = filemd5("${path.module}/templates/usp_UpsertCalories.sql")
+  }
+
+  provisioner "local-exec" {
+    interpreter = ["PowerShell", "-Command"]
+    command     = <<-EOT
+      $ErrorActionPreference = 'Stop'
+      $token  = (az account get-access-token --resource https://database.windows.net | ConvertFrom-Json).accessToken
+      $server = "${azurerm_mssql_server.dab.fully_qualified_domain_name}"
+      $db     = "${var.sql_database_name}"
+
+      Invoke-Sqlcmd -ServerInstance $server -Database $db -AccessToken $token -InputFile "${path.module}/templates/usp_UpsertCalories.sql"
+
+      # Grant the DAB container MI EXECUTE on the stored procedure
+      Invoke-Sqlcmd -ServerInstance $server -Database $db -AccessToken $token -Query "GRANT EXECUTE ON dbo.usp_UpsertCalories TO [${var.container_name}];"
+
+      Write-Host "FuelGaugeCalories table and stored procedure created."
+    EOT
+  }
+}
