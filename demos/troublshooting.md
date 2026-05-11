@@ -64,3 +64,12 @@ Then re-request the token — no app restart needed.
 **Prevention**
 
 The `null_resource.app_identifier_uri` provisioner now verifies the URI was actually set and throws if not, so a future failed apply will surface the error rather than silently continuing.
+
+## Snippets
+
+```PowerShell
+az containerapp logs show `                                             pwsh   85  14:49:26 
+  --name ca-dab-prod-001 `
+  --resource-group rg-dab-prod-001 `
+  --follow
+```

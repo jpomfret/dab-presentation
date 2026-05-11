@@ -61,11 +61,17 @@ try {
     # ── Acquire DAB API token via managed identity ─────────────────────────────
     # Windows Consumption plan blocks direct IMDS (169.254.169.254). Use the
     # IDENTITY_ENDPOINT / IDENTITY_HEADER env vars injected by the Functions host.
-    $tokenUri  = "$($env:IDENTITY_ENDPOINT)?api-version=2019-08-01&resource=api://$dabAppId"
-    $tokenResp = Invoke-RestMethod -Uri $tokenUri -Headers @{ 'X-IDENTITY-HEADER' = $env:IDENTITY_HEADER }
+    $identityEndpoint = $env:IDENTITY_ENDPOINT
+    $identityHeader   = $env:IDENTITY_HEADER
+    if (-not $identityEndpoint) { throw 'IDENTITY_ENDPOINT is not set — check the function app has a system-assigned managed identity enabled.' }
+    if (-not $identityHeader)   { throw 'IDENTITY_HEADER is not set — check the function app has a system-assigned managed identity enabled.' }
+
+    $tokenUri  = "${identityEndpoint}?api-version=2019-08-01&resource=api://$dabAppId"
+    Write-Host "Acquiring token: $tokenUri"
+    $tokenResp = Invoke-RestMethod -Uri $tokenUri -Headers @{ 'X-IDENTITY-HEADER' = $identityHeader }
+    Write-Host "Token acquired (expires $($tokenResp.expires_on))"
     $dabHeaders = @{
-        Authorization  = "Bearer $($tokenResp.access_token)"
-        'Content-Type' = 'application/json'
+        Authorization = "Bearer $($tokenResp.access_token)"
     }
 
     # ── Upsert wellness records via DAB ───────────────────────────────────────
@@ -87,7 +93,7 @@ try {
             Updated      = $record.updated
         } | ConvertTo-Json -Compress
 
-        Invoke-RestMethod -Uri "$dabBase/api/UpsertWellness" -Method Post -Headers $dabHeaders -Body $body
+        Invoke-RestMethod -Uri "$dabBase/api/UpsertWellness" -Method Post -Headers $dabHeaders -ContentType 'application/json' -Body $body
         $wellnessUpserted++
     }
     Write-Host "Upserted $wellnessUpserted wellness records"
@@ -115,7 +121,7 @@ try {
             ATL                 = $activity.icu_atl
         } | ConvertTo-Json -Compress
 
-        Invoke-RestMethod -Uri "$dabBase/api/UpsertActivity" -Method Post -Headers $dabHeaders -Body $body
+        Invoke-RestMethod -Uri "$dabBase/api/UpsertActivity" -Method Post -Headers $dabHeaders -ContentType 'application/json' -Body $body
         $activitiesUpserted++
     }
     Write-Host "Upserted $activitiesUpserted activity records"
@@ -123,7 +129,11 @@ try {
 } catch {
     $syncStatus = 'Error'
     $syncError  = $_.Exception.Message
-    Write-Host "IntervalsSync ERROR: $syncError"
+    Write-Host "IntervalsSync ERROR [$($_.Exception.GetType().FullName)]: $syncError"
+    if ($_.Exception.InnerException) {
+        Write-Host "  Inner: [$($_.Exception.InnerException.GetType().FullName)] $($_.Exception.InnerException.Message)"
+    }
+    Write-Host "  At: $($_.InvocationInfo.PositionMessage)"
 }
 
 # ── Write sync log via DAB ─────────────────────────────────────────────────────
@@ -131,17 +141,22 @@ try {
 try {
     $durationMs = [int]((Get-Date) - $startTime).TotalMilliseconds
 
-    # Token may not have been acquired yet if the error was early — acquire now
+    # Token may not have been acquired yet if the error was early — acquire now.
     if (-not $dabHeaders) {
-        $tokenUri  = "$($env:IDENTITY_ENDPOINT)?api-version=2019-08-01&resource=api://$dabAppId"
-        $tokenResp = Invoke-RestMethod -Uri $tokenUri -Headers @{ 'X-IDENTITY-HEADER' = $env:IDENTITY_HEADER }
-        $dabHeaders = @{
-            Authorization  = "Bearer $($tokenResp.access_token)"
-            'Content-Type' = 'application/json'
+        $identityEndpoint = $env:IDENTITY_ENDPOINT
+        $identityHeader   = $env:IDENTITY_HEADER
+        if ($identityEndpoint -and $identityHeader) {
+            $tokenUri  = "${identityEndpoint}?api-version=2019-08-01&resource=api://$dabAppId"
+            $tokenResp = Invoke-RestMethod -Uri $tokenUri -Headers @{ 'X-IDENTITY-HEADER' = $identityHeader }
+            $dabHeaders = @{
+                Authorization = "Bearer $($tokenResp.access_token)"
+            }
         }
     }
 
-    $triggerType = if ($Timer.IsPastDue) { 'Manual' } else { 'Timer' }
+    # $Timer.IsPastDue means the scheduled timer fired late — it does NOT indicate
+    # a manual invocation. All timer-triggered runs are recorded as 'Timer'.
+    $triggerType = 'Timer'
 
     $logBody = @{
         Source             = 'IntervalsSync'
@@ -157,7 +172,7 @@ try {
         ErrorMessage       = $syncError
     } | ConvertTo-Json -Compress
 
-    Invoke-RestMethod -Uri "$dabBase/api/LogSync" -Method Post -Headers $dabHeaders -Body $logBody
+    Invoke-RestMethod -Uri "$dabBase/api/LogSync" -Method Post -Headers $dabHeaders -ContentType 'application/json' -Body $logBody
     Write-Host "Sync log written: $syncStatus, ${durationMs}ms, $wellnessUpserted wellness, $activitiesUpserted activities"
 } catch {
     Write-Host "WARNING: Failed to write sync log: $($_.Exception.Message)"

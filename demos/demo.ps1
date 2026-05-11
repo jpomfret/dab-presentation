@@ -1,13 +1,14 @@
 <#
-
-app_registration_client_id = "78fca3ef-71ec-44e7-b268-949d7e947466"
-app_registration_identifier_uri = "api://78fca3ef-71ec-44e7-b268-949d7e947466"
-container_identity_principal_id = "57d5a80d-7d16-4585-a00a-417a1331e3bc"
-dab_api_endpoint = "http://ci-dab-prod-001.uksouth.azurecontainer.io:5000/api"
-dab_swagger_url = "http://ci-dab-prod-001.uksouth.azurecontainer.io:5000/swagger"
+app_insights_connection_string = <sensitive>
+app_registration_client_id = "2e270072-8631-44fd-95cd-490e72ae04a3"
+app_registration_identifier_uri = "api://2e270072-8631-44fd-95cd-490e72ae04a3"
+container_identity_principal_id = "967e7bc2-e6bf-4b89-8f0b-72fb9ab62968"
+dab_api_endpoint = "https://ca-dab-prod-001.greenbush-ad7ca4de.uksouth.azurecontainerapps.io/api"
+dab_swagger_url = "https://ca-dab-prod-001.greenbush-ad7ca4de.uksouth.azurecontainerapps.io/swagger"
+dashboard_url = "https://blue-mud-0e8339c03.7.azurestaticapps.net"
 function_app_hostname = "func-dab-prod-001.azurewebsites.net"
 function_app_identity_principal_id = "fe045b76-1754-4223-bb9f-013eaf598fb2"
-get_user_token_command = "az account get-access-token --resource 'api://78fca3ef-71ec-44e7-b268-949d7e947466' | ConvertFrom-Json | Select-Object -ExpandProperty accessToken"
+get_user_token_command = "az account get-access-token --resource 'api://2e270072-8631-44fd-95cd-490e72ae04a3' | ConvertFrom-Json | Select-Object -ExpandProperty accessToken"
 resource_group_name = "rg-dab-prod-001"
 sql_server_fqdn = "sqlsvr-dab-prod-001.database.windows.net"
 storage_account_name = "dabconfigstorage001"
@@ -15,7 +16,7 @@ tenant_id = "f98042ad-9bbc-499d-adb4-17193696b9a3"
 
 #>
 
-$data = Invoke-RestMethod -Uri 'http://ci-dab-prod-001.uksouth.azurecontainer.io:5000/api/dbo_BuildVersion'
+$data = Invoke-RestMethod -Uri 'https://ca-dab-prod-001.greenbush-ad7ca4de.uksouth.azurecontainerapps.io/api/dbo_BuildVersion'
 $data.value
 
 # Invoke-RestMethod:                                                                                                      
@@ -28,7 +29,7 @@ $data.value
 # }
 
 ## auth
-$appID = '78fca3ef-71ec-44e7-b268-949d7e947466'
+$appID = '2e270072-8631-44fd-95cd-490e72ae04a3'
 $tenantId = 'f98042ad-9bbc-499d-adb4-17193696b9a3'
 az login --tenant $tenantId --scope "api://$appID/.default"
 
@@ -46,7 +47,7 @@ Write-Host "Issuer: $($tokenClaims.iss)"  # Should be https://sts.windows.net/te
 
 # Test the API
 $headers = @{ 'Authorization' = "Bearer $token" }
-Invoke-RestMethod -Uri 'http://ci-dab-prod-001.uksouth.azurecontainer.io:5000/api/dbo_BuildVersion' -Headers $headers
+Invoke-RestMethod -Uri 'https://ca-dab-prod-001.greenbush-ad7ca4de.uksouth.azurecontainerapps.io/api/dbo_BuildVersion' -Headers $headers
 
 
 
