@@ -52,12 +52,7 @@ resource "null_resource" "deploy_dashboard" {
 
   triggers = {
     html_hash               = filemd5("${path.module}/dashboard/index.html")
-    wellness_index_hash     = filemd5("${path.module}/dashboard/api/wellness/index.js")
-    wellness_binding_hash   = filemd5("${path.module}/dashboard/api/wellness/function.json")
-    activities_index_hash   = filemd5("${path.module}/dashboard/api/activities/index.js")
-    activities_binding_hash = filemd5("${path.module}/dashboard/api/activities/function.json")
-    calories_index_hash     = filemd5("${path.module}/dashboard/api/calories/index.js")
-    calories_binding_hash   = filemd5("${path.module}/dashboard/api/calories/function.json")
+    synclog_hash            = filemd5("${path.module}/dashboard/synclog.html")
     swa_name                = azurerm_static_web_app.dashboard.name
   }
 
@@ -68,13 +63,19 @@ resource "null_resource" "deploy_dashboard" {
 
       # Render template — substitute placeholders
       $content = Get-Content "${path.module}/dashboard/index.html" -Raw -Encoding UTF8
-      $content = $content -replace '__APP_ID__',     '${azuread_application.dab_api.client_id}'
-      $content = $content -replace '__TENANT_ID__',  '${local.tenant_id}'
+      $content = $content -replace '__APP_ID__',        '${azuread_application.dab_api.client_id}'
+      $content = $content -replace '__TENANT_ID__',     '${local.tenant_id}'
+      $content = $content -replace '__DAB_ENDPOINT__',  '${local.dab_endpoint}'
 
       # Write to a temp deploy folder
       $tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) 'swa_dashboard'
       New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
       $content | Set-Content "$tmpDir/index.html" -Encoding UTF8
+
+      # Render synclog page — substitute DAB endpoint placeholder
+      $synclog = Get-Content "${path.module}/dashboard/synclog.html" -Raw -Encoding UTF8
+      $synclog = $synclog -replace '__DAB_ENDPOINT__', '${local.dab_endpoint}'
+      $synclog | Set-Content "$tmpDir/synclog.html" -Encoding UTF8
 
       # Get SWA deployment token
       $deployToken = (az staticwebapp secrets list `

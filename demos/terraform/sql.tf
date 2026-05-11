@@ -53,14 +53,14 @@ resource "azurerm_mssql_firewall_rule" "deployer_ip" {
 # an active az CLI session authenticated with the Entra admin account.
 resource "null_resource" "container_db_user" {
   depends_on = [
-    azurerm_container_group.dab,
+    azurerm_container_app.dab,
     azurerm_mssql_database.dab,
     azurerm_mssql_firewall_rule.allow_azure_services,
     azurerm_mssql_firewall_rule.deployer_ip,
   ]
 
   triggers = {
-    container_identity = azurerm_container_group.dab.identity[0].principal_id
+    container_identity = azurerm_container_app.dab.identity[0].principal_id
   }
 
   provisioner "local-exec" {

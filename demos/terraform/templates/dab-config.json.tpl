@@ -17,7 +17,7 @@
     },
     "host": {
       "cors": {
-        "origins": [],
+        "origins": ["*"],
         "allow-credentials": false
       },
       "authentication": {
@@ -169,6 +169,10 @@
         "enabled": true
       },
       "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ { "action": "read" } ]
+        },
         {
           "role": "Authenticated",
           "actions": [ { "action": "read" } ]

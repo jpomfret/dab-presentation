@@ -40,8 +40,8 @@ output "dashboard_url" {
 }
 
 output "container_identity_principal_id" {
-  description = "Object ID of the Container Instance's system-assigned managed identity"
-  value       = azurerm_container_group.dab.identity[0].principal_id
+  description = "Object ID of the Container App's system-assigned managed identity"
+  value       = azurerm_container_app.dab.identity[0].principal_id
 }
 
 output "app_registration_client_id" {

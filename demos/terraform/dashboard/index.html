@@ -194,7 +194,10 @@
     🌞 Chase the <span>Sun</span>
     <small>June 20, 2026 &middot; Training Dashboard</small>
   </div>
-  <button class="theme-toggle" id="theme-btn" title="Toggle light/dark mode">☀️</button>
+  <div style="display:flex;gap:0.75rem;align-items:center">
+    <a href="synclog.html" class="theme-toggle" style="text-decoration:none">🔄 Sync Log</a>
+    <button class="theme-toggle" id="theme-btn" title="Toggle light/dark mode">☀️</button>
+  </div>
   <div class="countdown">
     <div class="cd-unit"><div class="cd-num" id="cd-d">--</div><div class="cd-lbl">days</div></div>
     <div class="cd-sep">:</div>
@@ -229,6 +232,9 @@
 </main>
 
 <script>
+// __DAB_ENDPOINT__ is substituted by Terraform at deploy time.
+const DAB_BASE = '__DAB_ENDPOINT__'.startsWith('__') ? '' : '__DAB_ENDPOINT__';
+
 const RACE_DATE = new Date('2026-06-20T04:00:00Z');
 
 // ── Countdown ─────────────────────────────────────────────────────────────────
@@ -249,7 +255,7 @@ tick(); setInterval(tick, 1000);
 
 // ── Fetch helper ──────────────────────────────────────────────────────────────
 async function dabGet(path) {
-  const res = await fetch(path);
+  const res = await fetch(`${DAB_BASE}${path}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return (await res.json()).value ?? [];
 }
@@ -303,7 +309,7 @@ function optCard(label, value, unit, cls) {
 
 async function loadWellness() {
   try {
-    const rows = await dabGet('/api/wellness');
+    const rows = await dabGet('/api/IntervalsWellness?$orderby=RecordDate desc&$first=1');
     if (!rows?.length) {
       document.getElementById('wellness-grid').innerHTML = '<div class="card c-muted">No wellness data yet.</div>';
       return;
@@ -350,7 +356,7 @@ function fmtNum(v,u='') { return v != null ? Math.round(v)+u : '—'; }
 
 async function loadActivities() {
   try {
-    const rows = await dabGet('/api/activities');
+    const rows = await dabGet('/api/IntervalsActivity?$orderby=StartDateLocal desc&$first=10');
     if (!rows?.length) {
       document.getElementById('activities-list').innerHTML = '<div class="loading">No activities found.</div>';
       return;
@@ -417,12 +423,26 @@ function updateChartTheme(chart) {
 // ── Calories chart ────────────────────────────────────────────────────────────
 async function loadCalories() {
   try {
-    const rows = await dabGet('/api/calories');
+    // Fetch intake and burn in parallel then merge by date — previously done
+    // by the Azure Function, now handled here now that we call DAB directly.
+    const [intake, burn] = await Promise.all([
+      dabGet('/api/FuelGaugeCalories?$orderby=EntryDate asc&$first=14'),
+      dabGet('/api/FuelGaugeCalorieBurn?$orderby=EntryDate asc&$first=14'),
+    ]);
+
     const canvas = document.getElementById('calorie-chart');
-    if (!rows?.length) {
+    if (!intake?.length) {
       canvas.parentElement.innerHTML = '<div class="loading c-muted">No calorie data yet.</div>';
       return;
     }
+
+    const burnByDate = Object.fromEntries(burn.map(r => [r.EntryDate, r]));
+    const rows = intake.map(r => ({
+      EntryDate:        r.EntryDate,
+      DailyTotal:       r.DailyTotal       ?? 0,
+      BmrCalories:      burnByDate[r.EntryDate]?.BmrCalories      ?? 0,
+      ActivityCalories: burnByDate[r.EntryDate]?.ActivityCalories  ?? 0,
+    }));
 
     const labels      = rows.map(r => new Date(r.EntryDate).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' }));
     const intakeData  = rows.map(r => r.DailyTotal       ?? 0);

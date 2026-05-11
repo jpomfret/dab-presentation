@@ -69,15 +69,15 @@ variable "file_share_name" {
 # Container
 
 variable "container_name" {
-  description = "Name of the Azure Container Instance running DAB"
+  description = "Name of the Azure Container App running DAB (also used as the SQL database user name)"
   type        = string
-  default     = "ci-dab-prod-001"
+  default     = "ca-dab-prod-001"
 }
 
-variable "container_dns_label" {
-  description = "DNS label for the container instance (must be globally unique within the region)"
+variable "container_app_environment_name" {
+  description = "Name of the Azure Container App Environment"
   type        = string
-  default     = "ci-dab-prod-001"
+  default     = "cae-dab-prod-001"
 }
 
 variable "dab_image" {

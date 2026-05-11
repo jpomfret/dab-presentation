@@ -1,67 +1,108 @@
-resource "azurerm_container_group" "dab" {
-  name                = var.container_name
+# Log Analytics workspace — required by Container App Environment for log shipping.
+resource "azurerm_log_analytics_workspace" "dab" {
+  name                = "law-dab-prod-001"
   resource_group_name = azurerm_resource_group.dab.name
   location            = azurerm_resource_group.dab.location
-  ip_address_type     = "Public"
-  dns_name_label      = var.container_dns_label
-  os_type             = "Linux"
-  sku                 = "Standard"
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
+}
 
-  # System-assigned MI used to authenticate to Azure SQL Database
+# Container App Environment — the shared runtime boundary for our container.
+# Provisioned with a public, zone-redundant ingress so the Container App gets
+# a stable HTTPS hostname with TLS termination handled for us.
+resource "azurerm_container_app_environment" "dab" {
+  name                       = var.container_app_environment_name
+  resource_group_name        = azurerm_resource_group.dab.name
+  location                   = azurerm_resource_group.dab.location
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.dab.id
+}
+
+# Register the existing Azure Files share with the environment so containers
+# can mount it as a volume.
+resource "azurerm_container_app_environment_storage" "dab_config" {
+  name                         = "dab-config"
+  container_app_environment_id = azurerm_container_app_environment.dab.id
+  account_name                 = azurerm_storage_account.dab.name
+  share_name                   = azurerm_storage_share.dab.name
+  access_key                   = azurerm_storage_account.dab.primary_access_key
+  access_mode                  = "ReadOnly"
+}
+
+# DAB Container App.
+# External ingress gives a stable *.azurecontainerapps.io HTTPS endpoint —
+# TLS is terminated by the environment, DAB only ever speaks HTTP internally.
+resource "azurerm_container_app" "dab" {
+  name                         = var.container_name
+  container_app_environment_id = azurerm_container_app_environment.dab.id
+  resource_group_name          = azurerm_resource_group.dab.name
+  revision_mode                = "Single"
+
+  # System-assigned MI — used by DAB to authenticate to Azure SQL with
+  # Active Directory Default (no password in the connection string).
   identity {
     type = "SystemAssigned"
   }
 
-  container {
-    name   = "dab"
-    image  = var.dab_image
-    cpu    = "1"
-    memory = "1.5"
+  # External HTTPS ingress on the standard port (443).
+  # Container Apps terminates TLS; DAB listens on 5000 internally.
+  ingress {
+    external_enabled = true
+    target_port      = 5000
+    transport        = "http"
 
-    ports {
-      port     = 5000
-      protocol = "TCP"
+    traffic_weight {
+      percentage      = 100
+      latest_revision = true
     }
-
-    environment_variables = {
-      DATABASE_CONNECTION_STRING = local.connection_string
-    }
-
-    # Mount the file share so DAB can read /cfg/dab-config.json
-    volume {
-      name                 = "dab-config"
-      mount_path           = "/cfg"
-      share_name           = azurerm_storage_share.dab.name
-      storage_account_name = azurerm_storage_account.dab.name
-      storage_account_key  = azurerm_storage_account.dab.primary_access_key
-    }
-
-    commands = [
-      "dotnet",
-      "Azure.DataApiBuilder.Service.dll",
-      "--ConfigFileName",
-      "/cfg/dab-config.json",
-    ]
   }
 
-  depends_on = [null_resource.upload_dab_config]
-}
+  # Storage key passed as a secret so it isn't in plain text in the template.
+  secret {
+    name  = "storage-account-key"
+    value = azurerm_storage_account.dab.primary_access_key
+  }
 
-# Restart the container after the SQL database user is provisioned so it can
-# start in a healthy state with full database access. Also restarts when the
-# DAB config template changes so new permissions/entities take effect.
-resource "null_resource" "restart_container" {
+  template {
+    container {
+      name   = "dab"
+      image  = var.dab_image
+      cpu    = 0.5
+      memory = "1Gi"
+
+      env {
+        name  = "DATABASE_CONNECTION_STRING"
+        value = local.connection_string
+      }
+
+      # Changing this env var forces a new revision (= restart) whenever the
+      # DAB config file is re-uploaded to the file share.
+      env {
+        name  = "DAB_CONFIG_VERSION"
+        value = null_resource.upload_dab_config.id
+      }
+
+      volume_mounts {
+        name = "dab-config"
+        path = "/cfg"
+      }
+
+      command = [
+        "dotnet",
+        "Azure.DataApiBuilder.Service.dll",
+        "--ConfigFileName",
+        "/cfg/dab-config.json",
+      ]
+    }
+
+    volume {
+      name         = "dab-config"
+      storage_type = "AzureFile"
+      storage_name = azurerm_container_app_environment_storage.dab_config.name
+    }
+  }
+
   depends_on = [
-    null_resource.container_db_user,
+    azurerm_container_app_environment_storage.dab_config,
     null_resource.upload_dab_config,
   ]
-
-  triggers = {
-    container_db_user = null_resource.container_db_user.id
-    config_hash       = null_resource.upload_dab_config.id
-  }
-
-  provisioner "local-exec" {
-    command = "az container restart --resource-group ${var.resource_group_name} --name ${var.container_name}"
-  }
 }

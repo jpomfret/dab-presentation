@@ -11,14 +11,14 @@ entra_admin_group_name      = "SQLAdmin"
 sql_admin_password = "Change_Me_Str0ng!"
 
 # Optional overrides — defaults match the blog post naming
-# location             = "uksouth"
-# resource_group_name  = "rg-dab-prod-001"
-# sql_server_name      = "sqlsvr-dab-prod-001"
-# sql_database_name    = "sqldb-dab-prod-001"
-# storage_account_name = "dabconfigstorage001"   # must be globally unique
-# container_name       = "ci-dab-prod-001"
-# container_dns_label  = "ci-dab-prod-001"       # must be globally unique in region
-# function_app_name    = "func-dab-prod-001"
+# location                       = "uksouth"
+# resource_group_name            = "rg-dab-prod-001"
+# sql_server_name                = "sqlsvr-dab-prod-001"
+# sql_database_name              = "sqldb-dab-prod-001"
+# storage_account_name           = "dabconfigstorage001"  # must be globally unique
+# container_name                 = "ca-dab-prod-001"      # also becomes the SQL database user name
+# container_app_environment_name = "cae-dab-prod-001"
+# function_app_name              = "func-dab-prod-001"
 
 # FuelGauge calorie sync — object ID of the managed identity used by workload-identity-sa in AKS
 # az identity show -g <aks-node-rg> -n <mi-name> --query principalId -o tsv
