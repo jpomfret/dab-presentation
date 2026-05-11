@@ -93,7 +93,10 @@ try {
             Updated      = $record.updated
         } | ConvertTo-Json -Compress
 
-        Invoke-RestMethod -Uri "$dabBase/api/UpsertWellness" -Method Post -Headers $dabHeaders -ContentType 'application/json' -Body $body
+        # Use byte array body to avoid PS 7.4 StringContent/Content-Type header conflict
+        # (passing a string body with -ContentType causes InvalidOperationException in PS 7.4)
+        $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+        Invoke-RestMethod -Uri "$dabBase/api/UpsertWellness" -Method Post -Headers $dabHeaders -ContentType 'application/json' -Body $bodyBytes
         $wellnessUpserted++
     }
     Write-Host "Upserted $wellnessUpserted wellness records"
@@ -121,7 +124,8 @@ try {
             ATL                 = $activity.icu_atl
         } | ConvertTo-Json -Compress
 
-        Invoke-RestMethod -Uri "$dabBase/api/UpsertActivity" -Method Post -Headers $dabHeaders -ContentType 'application/json' -Body $body
+        $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+        Invoke-RestMethod -Uri "$dabBase/api/UpsertActivity" -Method Post -Headers $dabHeaders -ContentType 'application/json' -Body $bodyBytes
         $activitiesUpserted++
     }
     Write-Host "Upserted $activitiesUpserted activity records"
@@ -172,7 +176,8 @@ try {
         ErrorMessage       = $syncError
     } | ConvertTo-Json -Compress
 
-    Invoke-RestMethod -Uri "$dabBase/api/LogSync" -Method Post -Headers $dabHeaders -ContentType 'application/json' -Body $logBody
+    $logBodyBytes = [System.Text.Encoding]::UTF8.GetBytes($logBody)
+    Invoke-RestMethod -Uri "$dabBase/api/LogSync" -Method Post -Headers $dabHeaders -ContentType 'application/json' -Body $logBodyBytes
     Write-Host "Sync log written: $syncStatus, ${durationMs}ms, $wellnessUpserted wellness, $activitiesUpserted activities"
 } catch {
     Write-Host "WARNING: Failed to write sync log: $($_.Exception.Message)"
