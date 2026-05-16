@@ -134,3 +134,9 @@ variable "static_web_app_name" {
   type        = string
   default     = "swa-dab-prod-001"
 }
+
+variable "dashboard_custom_domain" {
+  description = "Custom subdomain to front the Static Web App (e.g. cts.jesspomfret.com). Leave empty to skip. The CNAME must exist in DNS pointing at the SWA default hostname before applying."
+  type        = string
+  default     = ""
+}

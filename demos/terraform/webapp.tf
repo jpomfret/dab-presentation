@@ -14,26 +14,43 @@ resource "azurerm_static_web_app" "dashboard" {
   }
 }
 
+# Custom domain — optional. Set dashboard_custom_domain in tfvars.
+# Prerequisite: CNAME record must exist in DNS before applying:
+#   <dashboard_custom_domain>  CNAME  <default_host_name>
+# Azure provisions the TLS cert automatically once the CNAME resolves.
+resource "azurerm_static_web_app_custom_domain" "dashboard" {
+  count             = var.dashboard_custom_domain != "" ? 1 : 0
+  static_web_app_id = azurerm_static_web_app.dashboard.id
+  domain_name       = var.dashboard_custom_domain
+  validation_type   = "cname-delegation"
+}
+
 # Register the SWA URL (and localhost for local testing) as SPA redirect URIs
 # on the Entra app registration so MSAL can complete the auth flow.
 resource "null_resource" "dashboard_redirect_uris" {
   depends_on = [azurerm_static_web_app.dashboard]
 
   triggers = {
-    swa_hostname = azurerm_static_web_app.dashboard.default_host_name
-    app_id       = azuread_application.dab_api.client_id
+    swa_hostname    = azurerm_static_web_app.dashboard.default_host_name
+    custom_domain   = var.dashboard_custom_domain
+    app_id          = azuread_application.dab_api.client_id
   }
 
   provisioner "local-exec" {
     interpreter = ["PowerShell", "-Command"]
     command     = <<-EOT
       $ErrorActionPreference = 'Stop'
-      az ad app update --id ${azuread_application.dab_api.client_id} `
-        --spa-redirect-uris `
-          "https://${azurerm_static_web_app.dashboard.default_host_name}" `
-          "http://localhost:4280" `
+      $redirectUris = @(
+          "https://${azurerm_static_web_app.dashboard.default_host_name}"
+          "http://localhost:4280"
           "http://localhost:3000"
-      Write-Host "SPA redirect URIs registered for ${azurerm_static_web_app.dashboard.default_host_name}"
+      )
+      if ("${var.dashboard_custom_domain}" -ne "") {
+          $redirectUris += "https://${var.dashboard_custom_domain}"
+      }
+      az ad app update --id ${azuread_application.dab_api.client_id} `
+        --spa-redirect-uris @redirectUris
+      Write-Host "SPA redirect URIs registered: $($redirectUris -join ', ')"
     EOT
   }
 }

@@ -6,6 +6,8 @@ if ((Test-Path -Path C:\GitHub\dab-presentation\demos\config)) {
     Remove-Item -Path C:\GitHub\dab-presentation\demos\config -Recurse
 }
 
+# remove container
+docker rm mssql1 -f
 
 # open a new pwsh in terminal so we have two and it's ready to go
 

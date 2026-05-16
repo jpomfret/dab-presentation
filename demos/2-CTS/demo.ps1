@@ -1,21 +1,3 @@
-<#
-app_insights_connection_string = <sensitive>
-app_registration_client_id = "2e270072-8631-44fd-95cd-490e72ae04a3"
-app_registration_identifier_uri = "api://2e270072-8631-44fd-95cd-490e72ae04a3"
-container_identity_principal_id = "967e7bc2-e6bf-4b89-8f0b-72fb9ab62968"
-dab_api_endpoint = "https://ca-dab-prod-001.greenbush-ad7ca4de.uksouth.azurecontainerapps.io/api"
-dab_swagger_url = "https://ca-dab-prod-001.greenbush-ad7ca4de.uksouth.azurecontainerapps.io/swagger"
-dashboard_url = "https://blue-mud-0e8339c03.7.azurestaticapps.net"
-function_app_hostname = "func-dab-prod-001.azurewebsites.net"
-function_app_identity_principal_id = "fe045b76-1754-4223-bb9f-013eaf598fb2"
-get_user_token_command = "az account get-access-token --resource 'api://2e270072-8631-44fd-95cd-490e72ae04a3' | ConvertFrom-Json | Select-Object -ExpandProperty accessToken"
-resource_group_name = "rg-dab-prod-001"
-sql_server_fqdn = "sqlsvr-dab-prod-001.database.windows.net"
-storage_account_name = "dabconfigstorage001"
-tenant_id = "***"
-
-#>
-
 $data = Invoke-RestMethod -Uri 'https://ca-dab-prod-001.greenbush-ad7ca4de.uksouth.azurecontainerapps.io/api/dbo_BuildVersion'
 $data.value
 

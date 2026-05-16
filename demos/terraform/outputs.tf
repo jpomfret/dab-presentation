@@ -68,3 +68,8 @@ output "get_user_token_command" {
   description = "PowerShell command to get a user token for testing the DAB API"
   value       = "az account get-access-token --resource 'api://${azuread_application.dab_api.client_id}' | ConvertFrom-Json | Select-Object -ExpandProperty accessToken"
 }
+
+output "dashboard_url_pub" {
+  description = "Public URL for the training dashboard (custom domain if configured, otherwise SWA default)"
+  value       = var.dashboard_custom_domain != "" ? "https://${var.dashboard_custom_domain}" : "https://${azurerm_static_web_app.dashboard.default_host_name}"
+}

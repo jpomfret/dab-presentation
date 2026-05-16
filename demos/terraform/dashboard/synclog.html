@@ -294,6 +294,16 @@
       margin-bottom: 1rem;
     }
 
+    /* ── Sortable column headers ─────────────────────────── */
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+    th.sortable:hover { color: var(--text); }
+    th.sortable::after { content: ' ↕'; opacity: 0.3; font-size: 0.7em; }
+    th.sort-asc::after  { content: ' ↑'; color: var(--accent); opacity: 1; }
+    th.sort-desc::after { content: ' ↓'; color: var(--accent); opacity: 1; }
+
     @media (max-width: 768px) {
       .col-error, th:nth-child(5), td:nth-child(5) { display: none; }
     }
@@ -392,13 +402,13 @@
     <table>
       <thead>
         <tr>
-          <th>ID</th>
-          <th>Run At</th>
+          <th class="sortable" data-col="LogId">ID</th>
+          <th class="sortable sort-desc" data-col="RunAt">Run At</th>
           <th>Source</th>
           <th>Trigger</th>
           <th>Records</th>
-          <th>Duration</th>
-          <th>Status</th>
+          <th class="sortable" data-col="DurationMs">Duration</th>
+          <th class="sortable" data-col="Status">Status</th>
           <th id="error-header">Error</th>
         </tr>
       </thead>
@@ -424,6 +434,8 @@ const state = {
   dateTo:    '',
   pageSize:  10,
   useSelect: false,
+  sortCol:   'RunAt',
+  sortDir:   'desc',
   // Cursor-based pagination ($after / nextLink)
   cursor:       null,   // $after token for the current page (null = first page)
   cursorStack:  [],     // stack of cursors for Prev navigation
@@ -449,7 +461,7 @@ function buildQueryString() {
   // treating the value as Edm.String instead of Edm.DateTimeOffset.
   if (filters.length) parts.push(`$filter=${filters.join(' and ').replace(/ /g, '%20')}`);
 
-  parts.push(`$orderby=RunAt desc`);
+  parts.push(`$orderby=${state.sortCol} ${state.sortDir}`);
   parts.push(`$first=${state.pageSize}`);
   if (state.cursor) parts.push(`$after=${state.cursor}`);
   if (state.useSelect) parts.push(`$select=${SELECT_COLS}`);
@@ -655,6 +667,29 @@ document.getElementById('reset-btn').addEventListener('click', () => {
   fetchLogs();
 });
 
+// ── Column sort ────────────────────────────────────────────────────────────────
+function renderSortHeaders() {
+  document.querySelectorAll('thead th[data-col]').forEach(th => {
+    th.className = 'sortable';
+    if (th.dataset.col === state.sortCol) th.classList.add(`sort-${state.sortDir}`);
+  });
+}
+
+document.querySelector('thead').addEventListener('click', e => {
+  const th = e.target.closest('th[data-col]');
+  if (!th) return;
+  const col = th.dataset.col;
+  if (col === state.sortCol) {
+    state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    state.sortCol = col;
+    state.sortDir = 'asc';
+  }
+  renderSortHeaders();
+  resetCursor();
+  fetchLogs();
+});
+
 // ── URL copy ───────────────────────────────────────────────────────────────────
 document.getElementById('url-copy-btn').addEventListener('click', () => {
   const displayUrl = buildDisplayUrl();
@@ -687,6 +722,7 @@ function showError(msg) {
 function hideError() { document.getElementById('error-box').style.display = 'none'; }
 
 // ── Boot ───────────────────────────────────────────────────────────────────────
+renderSortHeaders();
 fetchLogs();
 </script>
 </body>

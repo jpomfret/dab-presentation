@@ -27,6 +27,29 @@ if (-not $athleteId -or -not $apiKey -or -not $dabBase -or -not $dabAppId) {
 
 $startTime = Get-Date
 
+# ── HttpClient for all DAB POST calls ─────────────────────────────────────────
+# Invoke-RestMethod on Windows PS 7.4 uses WinHttpHandler, which throws
+# InvalidOperationException against Azure Container Apps regardless of the
+# transport setting. SocketsHttpHandler (used here explicitly) is the
+# cross-platform handler and works reliably.
+$handler                          = [System.Net.Http.SocketsHttpHandler]::new()
+$dabClient                        = [System.Net.Http.HttpClient]::new($handler)
+$dabClient.DefaultRequestVersion  = [System.Version]::new(1, 1)
+$dabClient.DefaultVersionPolicy   = [System.Net.Http.HttpVersionPolicy]::RequestVersionOrLower
+
+function Invoke-DabPost {
+    param([string]$Uri, [string]$Token, [string]$Body)
+    $content          = [System.Net.Http.StringContent]::new($Body, [System.Text.Encoding]::UTF8, 'application/json')
+    $request          = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Post, $Uri)
+    $request.Content  = $content
+    $request.Headers.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $Token)
+    $response = $dabClient.SendAsync($request).GetAwaiter().GetResult()
+    if (-not $response.IsSuccessStatusCode) {
+        $err = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+        throw "DAB returned HTTP $([int]$response.StatusCode) $($response.ReasonPhrase): $err"
+    }
+}
+
 # ── Basic auth header for intervals.icu (username is the literal "API_KEY") ───
 $base64Creds      = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("API_KEY:$apiKey"))
 $intervalsHeaders = @{ Authorization = "Basic $base64Creds" }
@@ -92,12 +115,7 @@ try {
             Updated      = $record.updated
         } | ConvertTo-Json -Compress
 
-        Invoke-RestMethod `
-            -Uri         "$dabBase/api/UpsertWellness" `
-            -Method      Post `
-            -Headers     @{ 'Authorization' = "Bearer $dabToken" } `
-            -ContentType 'application/json' `
-            -Body        $body
+        Invoke-DabPost -Uri "$dabBase/api/UpsertWellness" -Token $dabToken -Body $body
         $wellnessUpserted++
     }
     Write-Host "Upserted $wellnessUpserted wellness records"
@@ -125,12 +143,7 @@ try {
             ATL                 = $activity.icu_atl
         } | ConvertTo-Json -Compress
 
-        Invoke-RestMethod `
-            -Uri         "$dabBase/api/UpsertActivity" `
-            -Method      Post `
-            -Headers     @{ 'Authorization' = "Bearer $dabToken" } `
-            -ContentType 'application/json' `
-            -Body        $body
+        Invoke-DabPost -Uri "$dabBase/api/UpsertActivity" -Token $dabToken -Body $body
         $activitiesUpserted++
     }
     Write-Host "Upserted $activitiesUpserted activity records"
@@ -180,18 +193,15 @@ try {
             ErrorMessage       = $syncError
         } | ConvertTo-Json -Compress
 
-        Invoke-RestMethod `
-            -Uri         "$dabBase/api/LogSync" `
-            -Method      Post `
-            -Headers     @{ 'Authorization' = "Bearer $dabToken" } `
-            -ContentType 'application/json' `
-            -Body        $logBody
+        Invoke-DabPost -Uri "$dabBase/api/LogSync" -Token $dabToken -Body $logBody
         Write-Host "Sync log written: $syncStatus, ${durationMs}ms, $wellnessUpserted wellness, $activitiesUpserted activities"
     } else {
         Write-Host "WARNING: Skipping sync log — no token available."
     }
 } catch {
     Write-Host "WARNING: Failed to write sync log: $($_.Exception.Message)"
+} finally {
+    $dabClient.Dispose()
 }
 
 if ($syncStatus -eq 'Error') {

@@ -32,7 +32,8 @@ Invoke-RestMethod -Uri "$baseUrl/dbo_BuildVersion"
 #region 2 — Get a token, call again → data
 
 # Log in and request a token scoped to our DAB app registration.
-az login --scope "api://$appId/.default"
+$tenantId = 'f98042ad-9bbc-499d-adb4-17193696b9a3'
+az login --tenant $tenantId --scope "api://$appID/.default"
 
 $token = az account get-access-token --resource "api://$appId" |
     ConvertFrom-Json |
@@ -68,8 +69,8 @@ Invoke-RestMethod -Uri "$baseUrl/SyncLog?`$filter=Status eq 'Error'" -Headers $h
     Select-Object -ExpandProperty value
 
 # --- 3d. Filter — runs from a specific source in the last 7 days ---
-$since = (Get-Date).AddDays(-7).ToString('yyyy-MM-dd')
-Invoke-RestMethod -Uri "$baseUrl/SyncLog?`$filter=Source eq 'IntervalsSync' and RunAt ge '$since'" -Headers $headers |
+$since = (Get-Date).AddDays(-7).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+Invoke-RestMethod -Uri "$baseUrl/SyncLog?`$filter=Source eq 'IntervalsSync' and RunAt ge $since" -Headers $headers |
     Select-Object -ExpandProperty value
 
 # --- 3e. Select — only the columns you actually need ---
