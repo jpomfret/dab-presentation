@@ -8,7 +8,7 @@
 # Required app settings:
 #   INTERVALS_ATHLETE_ID  — intervals.icu athlete ID (use "0" for yourself)
 #   INTERVALS_API_KEY     — API key from intervals.icu /settings
-#   DAB_ENDPOINT          — Base URL of the DAB container (e.g. http://host:5000)
+#   DAB_ENDPOINT          — Base URL of the DAB container (e.g. https://host.azurecontainerapps.io)
 #   DAB_API_APP_ID        — Client ID of the DAB-API-Access app registration
 
 param($Timer)
@@ -28,7 +28,7 @@ if (-not $athleteId -or -not $apiKey -or -not $dabBase -or -not $dabAppId) {
 $startTime = Get-Date
 
 # ── Basic auth header for intervals.icu (username is the literal "API_KEY") ───
-$base64Creds    = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("API_KEY:$apiKey"))
+$base64Creds      = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("API_KEY:$apiKey"))
 $intervalsHeaders = @{ Authorization = "Basic $base64Creds" }
 
 # ── Date range: last 7 days catches delayed wellness updates ───────────────────
@@ -44,6 +44,7 @@ $activitiesFetched  = 0
 $activitiesUpserted = 0
 $syncStatus         = 'Success'
 $syncError          = $null
+$dabToken           = $null
 
 try {
     # ── Fetch wellness records ─────────────────────────────────────────────────
@@ -69,10 +70,8 @@ try {
     $tokenUri  = "${identityEndpoint}?api-version=2019-08-01&resource=api://$dabAppId"
     Write-Host "Acquiring token: $tokenUri"
     $tokenResp = Invoke-RestMethod -Uri $tokenUri -Headers @{ 'X-IDENTITY-HEADER' = $identityHeader }
+    $dabToken  = $tokenResp.access_token
     Write-Host "Token acquired (expires $($tokenResp.expires_on))"
-    $dabHeaders = @{
-        Authorization = "Bearer $($tokenResp.access_token)"
-    }
 
     # ── Upsert wellness records via DAB ───────────────────────────────────────
     foreach ($record in $wellness) {
@@ -93,10 +92,12 @@ try {
             Updated      = $record.updated
         } | ConvertTo-Json -Compress
 
-        # Use byte array body to avoid PS 7.4 StringContent/Content-Type header conflict
-        # (passing a string body with -ContentType causes InvalidOperationException in PS 7.4)
-        $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($body)
-        Invoke-RestMethod -Uri "$dabBase/api/UpsertWellness" -Method Post -Headers $dabHeaders -ContentType 'application/json' -Body $bodyBytes
+        Invoke-RestMethod `
+            -Uri         "$dabBase/api/UpsertWellness" `
+            -Method      Post `
+            -Headers     @{ 'Authorization' = "Bearer $dabToken" } `
+            -ContentType 'application/json' `
+            -Body        $body
         $wellnessUpserted++
     }
     Write-Host "Upserted $wellnessUpserted wellness records"
@@ -124,8 +125,12 @@ try {
             ATL                 = $activity.icu_atl
         } | ConvertTo-Json -Compress
 
-        $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($body)
-        Invoke-RestMethod -Uri "$dabBase/api/UpsertActivity" -Method Post -Headers $dabHeaders -ContentType 'application/json' -Body $bodyBytes
+        Invoke-RestMethod `
+            -Uri         "$dabBase/api/UpsertActivity" `
+            -Method      Post `
+            -Headers     @{ 'Authorization' = "Bearer $dabToken" } `
+            -ContentType 'application/json' `
+            -Body        $body
         $activitiesUpserted++
     }
     Write-Host "Upserted $activitiesUpserted activity records"
@@ -146,39 +151,45 @@ try {
     $durationMs = [int]((Get-Date) - $startTime).TotalMilliseconds
 
     # Token may not have been acquired yet if the error was early — acquire now.
-    if (-not $dabHeaders) {
+    if (-not $dabToken) {
         $identityEndpoint = $env:IDENTITY_ENDPOINT
         $identityHeader   = $env:IDENTITY_HEADER
         if ($identityEndpoint -and $identityHeader) {
             $tokenUri  = "${identityEndpoint}?api-version=2019-08-01&resource=api://$dabAppId"
             $tokenResp = Invoke-RestMethod -Uri $tokenUri -Headers @{ 'X-IDENTITY-HEADER' = $identityHeader }
-            $dabHeaders = @{
-                Authorization = "Bearer $($tokenResp.access_token)"
-            }
+            $dabToken  = $tokenResp.access_token
         }
     }
 
-    # $Timer.IsPastDue means the scheduled timer fired late — it does NOT indicate
-    # a manual invocation. All timer-triggered runs are recorded as 'Timer'.
-    $triggerType = 'Timer'
+    if ($dabToken) {
+        # $Timer.IsPastDue means the scheduled timer fired late — it does NOT indicate
+        # a manual invocation. All timer-triggered runs are recorded as 'Timer'.
+        $triggerType = 'Timer'
 
-    $logBody = @{
-        Source             = 'IntervalsSync'
-        TriggerType        = $triggerType
-        DateRangeStart     = $weekAgo
-        DateRangeEnd       = $today
-        WellnessFetched    = $wellnessFetched
-        WellnessUpserted   = $wellnessUpserted
-        ActivitiesFetched  = $activitiesFetched
-        ActivitiesUpserted = $activitiesUpserted
-        DurationMs         = $durationMs
-        Status             = $syncStatus
-        ErrorMessage       = $syncError
-    } | ConvertTo-Json -Compress
+        $logBody = @{
+            Source             = 'IntervalsSync'
+            TriggerType        = $triggerType
+            DateRangeStart     = $weekAgo
+            DateRangeEnd       = $today
+            WellnessFetched    = $wellnessFetched
+            WellnessUpserted   = $wellnessUpserted
+            ActivitiesFetched  = $activitiesFetched
+            ActivitiesUpserted = $activitiesUpserted
+            DurationMs         = $durationMs
+            Status             = $syncStatus
+            ErrorMessage       = $syncError
+        } | ConvertTo-Json -Compress
 
-    $logBodyBytes = [System.Text.Encoding]::UTF8.GetBytes($logBody)
-    Invoke-RestMethod -Uri "$dabBase/api/LogSync" -Method Post -Headers $dabHeaders -ContentType 'application/json' -Body $logBodyBytes
-    Write-Host "Sync log written: $syncStatus, ${durationMs}ms, $wellnessUpserted wellness, $activitiesUpserted activities"
+        Invoke-RestMethod `
+            -Uri         "$dabBase/api/LogSync" `
+            -Method      Post `
+            -Headers     @{ 'Authorization' = "Bearer $dabToken" } `
+            -ContentType 'application/json' `
+            -Body        $logBody
+        Write-Host "Sync log written: $syncStatus, ${durationMs}ms, $wellnessUpserted wellness, $activitiesUpserted activities"
+    } else {
+        Write-Host "WARNING: Skipping sync log — no token available."
+    }
 } catch {
     Write-Host "WARNING: Failed to write sync log: $($_.Exception.Message)"
 }
@@ -188,4 +199,3 @@ if ($syncStatus -eq 'Error') {
 }
 
 Write-Host "IntervalsSync completed successfully."
-

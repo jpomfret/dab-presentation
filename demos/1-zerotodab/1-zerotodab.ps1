@@ -13,6 +13,7 @@ if (-not (Test-Path -Path C:\GitHub\dab-presentation\demos\config)) {
 }
 Set-Location -Path C:\GitHub\dab-presentation\demos\config
 
+# use the dab cli
 dab init --database-type "mssql" `
         --host-mode "Development" `
         --connection-string "Server=localhost,2500;User Id=sqladmin;Database=pubs;Password=dbatools.IO;TrustServerCertificate=True;Encrypt=True;"
@@ -20,8 +21,8 @@ dab init --database-type "mssql" `
 # or create with mssql extension
 
 code dab-config.json
-# add an entity
 
+# add an entity
 dab add Author --source "dbo.authors" --permissions "anonymous:*"
 
 # start dab
@@ -33,8 +34,8 @@ dab start
 # go to http://localhost:5000/api/Author
 
 # call from PowerShell
-$result = Invoke-WebRequest -Uri http://localhost:5000/api/Author -Method Get
-($result.Content | ConvertFrom-Json).Value
+$result = Invoke-RestMethod -Uri http://localhost:5000/api/Author -Method Get
+$result.Value
 
 # Can also post data - to insert a new author
 $body = @{
@@ -44,7 +45,7 @@ $body = @{
     "contract" = "True"
 } | ConvertTo-Json
 
-$result = Invoke-WebRequest -Uri http://localhost:5000/api/Author -Method Post -Body $body -ContentType "application/json"
+$result = Invoke-RestMethod -Uri http://localhost:5000/api/Author -Method Post -Body $body -ContentType "application/json"
 ($result.Content | ConvertFrom-Json).Value
 
 # problems? next steps! 

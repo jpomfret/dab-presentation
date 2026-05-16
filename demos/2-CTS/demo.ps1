@@ -12,7 +12,7 @@ get_user_token_command = "az account get-access-token --resource 'api://2e270072
 resource_group_name = "rg-dab-prod-001"
 sql_server_fqdn = "sqlsvr-dab-prod-001.database.windows.net"
 storage_account_name = "dabconfigstorage001"
-tenant_id = "f98042ad-9bbc-499d-adb4-17193696b9a3"
+tenant_id = "***"
 
 #>
 
@@ -49,8 +49,28 @@ Write-Host "Issuer: $($tokenClaims.iss)"  # Should be https://sts.windows.net/te
 $headers = @{ 'Authorization' = "Bearer $token" }
 Invoke-RestMethod -Uri 'https://ca-dab-prod-001.greenbush-ad7ca4de.uksouth.azurecontainerapps.io/api/dbo_BuildVersion' -Headers $headers
 
+# anon GET access
+Invoke-RestMethod -Uri 'https://ca-dab-prod-001.greenbush-ad7ca4de.uksouth.azurecontainerapps.io/api/IntervalsWellness'
+Invoke-RestMethod -Uri 'https://ca-dab-prod-001.greenbush-ad7ca4de.uksouth.azurecontainerapps.io/api/IntervalsActivity'
+
+# but POST requires a token
+$body = @{
+    "RecordDate" = (Get-Date).ToString("o")
+    "Steps" = 1234
+    "HeartRate" = 80
+} | ConvertTo-Json
+
+$iwr = @{
+    Uri = 'https://ca-dab-prod-001.greenbush-ad7ca4de.uksouth.azurecontainerapps.io/api/IntervalsWellness'
+    Method = 'Post'
+    Body = $body
+    ContentType = "application/json"
+    # Headers = @{ 'Authorization' = "Bearer $token" }
+}
+Invoke-RestMethod @iwr
 
 
+# run the function and review the logs
 $masterKey = (az functionapp keys list `
   --resource-group rg-dab-prod-001 `
   --name func-dab-prod-001 `
@@ -78,5 +98,3 @@ Invoke-RestMethod `
   -Headers @{ 'Authorization' = "Bearer $token" }
 
 
-Invoke-RestMethod 'http://ci-dab-prod-001.uksouth.azurecontainer.io:5000/api/IntervalsWellness' -Headers $headers
-Invoke-RestMethod 'http://ci-dab-prod-001.uksouth.azurecontainer.io:5000/api/IntervalsActivity' -Headers $headers
