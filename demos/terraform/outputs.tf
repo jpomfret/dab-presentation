@@ -20,12 +20,12 @@ output "dab_swagger_url" {
 
 output "function_app_hostname" {
   description = "Default hostname of the Azure Function App"
-  value       = azurerm_windows_function_app.dab.default_hostname
+  value       = azurerm_linux_function_app.dab.default_hostname
 }
 
 output "function_app_identity_principal_id" {
   description = "Object ID of the Function App's system-assigned managed identity"
-  value       = azurerm_windows_function_app.dab.identity[0].principal_id
+  value       = azurerm_linux_function_app.dab.identity[0].principal_id
 }
 
 output "app_insights_connection_string" {

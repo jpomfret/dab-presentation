@@ -9,11 +9,18 @@ resource "azurerm_service_plan" "dab" {
   name                = var.app_service_plan_name
   resource_group_name = azurerm_resource_group.dab.name
   location            = azurerm_resource_group.dab.location
-  os_type             = "Windows"
+  os_type             = "Linux"
   sku_name            = "Y1" # Consumption plan
+
+  # os_type is immutable, so switching Windows → Linux forces a replacement.
+  # Default Terraform behaviour is create-then-destroy, which needs 2 quota
+  # slots simultaneously. Destroy-first keeps us within the single-slot limit.
+  lifecycle {
+    create_before_destroy = false
+  }
 }
 
-resource "azurerm_windows_function_app" "dab" {
+resource "azurerm_linux_function_app" "dab" {
   name                       = var.function_app_name
   resource_group_name        = azurerm_resource_group.dab.name
   location                   = azurerm_resource_group.dab.location
@@ -58,14 +65,14 @@ resource "azurerm_windows_function_app" "dab" {
 # the function's own identity.principal_id (a self-referential cycle).
 # This null_resource sets it after the function app and its MI are created.
 resource "null_resource" "function_client_id_setting" {
-  depends_on = [azurerm_windows_function_app.dab]
+  depends_on = [azurerm_linux_function_app.dab]
 
   triggers = {
-    principal_id = azurerm_windows_function_app.dab.identity[0].principal_id
+    principal_id = azurerm_linux_function_app.dab.identity[0].principal_id
   }
 
   provisioner "local-exec" {
-    command = "az functionapp config appsettings set --name ${var.function_app_name} --resource-group ${var.resource_group_name} --settings AZURE_CLIENT_ID=${azurerm_windows_function_app.dab.identity[0].principal_id}"
+    command = "az functionapp config appsettings set --name ${var.function_app_name} --resource-group ${var.resource_group_name} --settings AZURE_CLIENT_ID=${azurerm_linux_function_app.dab.identity[0].principal_id}"
   }
 }
 
@@ -73,7 +80,7 @@ resource "null_resource" "function_client_id_setting" {
 # Re-runs whenever run.ps1 or host.json change (tracked by file hash).
 resource "null_resource" "deploy_intervals_function" {
   depends_on = [
-    azurerm_windows_function_app.dab,
+    azurerm_linux_function_app.dab,
     null_resource.function_client_id_setting,
   ]
 

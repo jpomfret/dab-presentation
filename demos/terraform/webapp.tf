@@ -102,8 +102,6 @@ resource "null_resource" "deploy_dashboard" {
 
       # Deploy via SWA CLI
       npx --yes @azure/static-web-apps-cli deploy $tmpDir `
-        --api-location "${path.module}/dashboard/api" `
-        --api-language node --api-version 18 `
         --deployment-token $deployToken `
         --env production
 

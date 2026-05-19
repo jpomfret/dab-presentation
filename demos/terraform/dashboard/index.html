@@ -426,8 +426,8 @@ async function loadCalories() {
     // Fetch intake and burn in parallel then merge by date — previously done
     // by the Azure Function, now handled here now that we call DAB directly.
     const [intake, burn] = await Promise.all([
-      dabGet('/api/FuelGaugeCalories?$orderby=EntryDate asc&$first=14'),
-      dabGet('/api/FuelGaugeCalorieBurn?$orderby=EntryDate asc&$first=14'),
+      dabGet('/api/FuelGaugeCalories?$orderby=EntryDate desc&$first=7'),
+      dabGet('/api/FuelGaugeCalorieBurn?$orderby=EntryDate desc&$first=7'),
     ]);
 
     const canvas = document.getElementById('calorie-chart');
@@ -442,7 +442,7 @@ async function loadCalories() {
       DailyTotal:       r.DailyTotal       ?? 0,
       BmrCalories:      burnByDate[r.EntryDate]?.BmrCalories      ?? 0,
       ActivityCalories: burnByDate[r.EntryDate]?.ActivityCalories  ?? 0,
-    }));
+    })).reverse();
 
     const labels      = rows.map(r => new Date(r.EntryDate).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' }));
     const intakeData  = rows.map(r => r.DailyTotal       ?? 0);

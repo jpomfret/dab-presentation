@@ -27,28 +27,15 @@ if (-not $athleteId -or -not $apiKey -or -not $dabBase -or -not $dabAppId) {
 
 $startTime = Get-Date
 
-# ── HttpClient for all DAB POST calls ─────────────────────────────────────────
-# Invoke-RestMethod on Windows PS 7.4 uses WinHttpHandler, which throws
-# InvalidOperationException against Azure Container Apps regardless of the
-# transport setting. SocketsHttpHandler (used here explicitly) is the
-# cross-platform handler and works reliably.
-$handler                          = [System.Net.Http.SocketsHttpHandler]::new()
-$dabClient                        = [System.Net.Http.HttpClient]::new($handler)
-$dabClient.DefaultRequestVersion  = [System.Version]::new(1, 1)
+# ── DAB HTTP client ────────────────────────────────────────────────────────────
+# Azure Container Apps rejects connections that negotiate HTTP/2.
+# Invoke-RestMethod has no way to force HTTP/1.1 in the PS build on this host
+# (-HttpVersionPolicy is not available), so we use HttpClient directly with
+# SocketsHttpHandler pinned to HTTP/1.1.
+$_handler                         = [System.Net.Http.SocketsHttpHandler]::new()
+$dabClient                        = [System.Net.Http.HttpClient]::new($_handler)
+$dabClient.DefaultRequestVersion  = [version]'1.1'
 $dabClient.DefaultVersionPolicy   = [System.Net.Http.HttpVersionPolicy]::RequestVersionOrLower
-
-function Invoke-DabPost {
-    param([string]$Uri, [string]$Token, [string]$Body)
-    $content          = [System.Net.Http.StringContent]::new($Body, [System.Text.Encoding]::UTF8, 'application/json')
-    $request          = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Post, $Uri)
-    $request.Content  = $content
-    $request.Headers.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $Token)
-    $response = $dabClient.SendAsync($request).GetAwaiter().GetResult()
-    if (-not $response.IsSuccessStatusCode) {
-        $err = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
-        throw "DAB returned HTTP $([int]$response.StatusCode) $($response.ReasonPhrase): $err"
-    }
-}
 
 # ── Basic auth header for intervals.icu (username is the literal "API_KEY") ───
 $base64Creds      = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("API_KEY:$apiKey"))
@@ -83,8 +70,8 @@ try {
     Write-Host "Fetched $activitiesFetched activity records"
 
     # ── Acquire DAB API token via managed identity ─────────────────────────────
-    # Windows Consumption plan blocks direct IMDS (169.254.169.254). Use the
-    # IDENTITY_ENDPOINT / IDENTITY_HEADER env vars injected by the Functions host.
+    # Use IDENTITY_ENDPOINT / IDENTITY_HEADER injected by the Functions host
+    # rather than IMDS directly — these work on both Linux and Windows plans.
     $identityEndpoint = $env:IDENTITY_ENDPOINT
     $identityHeader   = $env:IDENTITY_HEADER
     if (-not $identityEndpoint) { throw 'IDENTITY_ENDPOINT is not set — check the function app has a system-assigned managed identity enabled.' }
@@ -115,7 +102,11 @@ try {
             Updated      = $record.updated
         } | ConvertTo-Json -Compress
 
-        Invoke-DabPost -Uri "$dabBase/api/UpsertWellness" -Token $dabToken -Body $body
+        $req         = [System.Net.Http.HttpRequestMessage]::new('POST', "$dabBase/api/UpsertWellness")
+        $req.Content = [System.Net.Http.StringContent]::new($body, [Text.Encoding]::UTF8, 'application/json')
+        $req.Headers.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $dabToken)
+        $resp = $dabClient.SendAsync($req).GetAwaiter().GetResult()
+        if (-not $resp.IsSuccessStatusCode) { throw "DAB $([int]$resp.StatusCode): $($resp.Content.ReadAsStringAsync().GetAwaiter().GetResult())" }
         $wellnessUpserted++
     }
     Write-Host "Upserted $wellnessUpserted wellness records"
@@ -143,7 +134,11 @@ try {
             ATL                 = $activity.icu_atl
         } | ConvertTo-Json -Compress
 
-        Invoke-DabPost -Uri "$dabBase/api/UpsertActivity" -Token $dabToken -Body $body
+        $req         = [System.Net.Http.HttpRequestMessage]::new('POST', "$dabBase/api/UpsertActivity")
+        $req.Content = [System.Net.Http.StringContent]::new($body, [Text.Encoding]::UTF8, 'application/json')
+        $req.Headers.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $dabToken)
+        $resp = $dabClient.SendAsync($req).GetAwaiter().GetResult()
+        if (-not $resp.IsSuccessStatusCode) { throw "DAB $([int]$resp.StatusCode): $($resp.Content.ReadAsStringAsync().GetAwaiter().GetResult())" }
         $activitiesUpserted++
     }
     Write-Host "Upserted $activitiesUpserted activity records"
@@ -193,7 +188,11 @@ try {
             ErrorMessage       = $syncError
         } | ConvertTo-Json -Compress
 
-        Invoke-DabPost -Uri "$dabBase/api/LogSync" -Token $dabToken -Body $logBody
+        $req         = [System.Net.Http.HttpRequestMessage]::new('POST', "$dabBase/api/LogSync")
+        $req.Content = [System.Net.Http.StringContent]::new($logBody, [Text.Encoding]::UTF8, 'application/json')
+        $req.Headers.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $dabToken)
+        $resp = $dabClient.SendAsync($req).GetAwaiter().GetResult()
+        if (-not $resp.IsSuccessStatusCode) { throw "DAB $([int]$resp.StatusCode): $($resp.Content.ReadAsStringAsync().GetAwaiter().GetResult())" }
         Write-Host "Sync log written: $syncStatus, ${durationMs}ms, $wellnessUpserted wellness, $activitiesUpserted activities"
     } else {
         Write-Host "WARNING: Skipping sync log — no token available."

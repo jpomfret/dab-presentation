@@ -84,7 +84,7 @@ resource "azuread_service_principal" "dab_api" {
 # with the DAB.Access role claim and call the DAB API as an application.
 resource "azuread_app_role_assignment" "function_dab_access" {
   app_role_id         = random_uuid.app_role_id.result
-  principal_object_id = azurerm_windows_function_app.dab.identity[0].principal_id
+  principal_object_id = azurerm_linux_function_app.dab.identity[0].principal_id
   resource_object_id  = azuread_service_principal.dab_api.object_id
 }
 
