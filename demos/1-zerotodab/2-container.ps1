@@ -19,8 +19,8 @@ if (Test-Path -Path .\dab-config.json) {
     Remove-Item -Path .\dab-config.json
 }
 
-# store the connection string in an environment variable — never hardcoded in the config
-$env:CONN_STR = "Server=host.docker.internal,2500;User Id=sqladmin;Database=pubs;Password=dbatools.IO;TrustServerCertificate=True;Encrypt=True;"
+# store the connection string as a variable — never hardcoded in the config
+$CONN_STR = "Server=host.docker.internal,2500;User Id=sqladmin;Database=pubs;Password=dbatools.IO;TrustServerCertificate=True;Encrypt=True;"
 
 # note: inside the container, 'localhost' refers to the container itself,
 # so we use host.docker.internal to reach SQL Server on the host machine
@@ -30,7 +30,7 @@ dab init --database-type "mssql" `
         --connection-string "@env('CONN_STR')"
 
 # add an entity
-dab add Author --source "dbo.authors" --permissions "anonymous:*"
+dab add Author --source "dbo.authors" --permissions "anonymous:read"
 
 # review the config
 code dab-config.json
@@ -41,15 +41,25 @@ code dab-config.json
 docker run -it --rm `
     -p 5000:5000 `
     -v "C:\GitHub\dab-presentation\demos\config:/App/dab-config" `
-    -e "CONN_STR=$env:CONN_STR" `
+    -e "CONN_STR=$CONN_STR" `
     mcr.microsoft.com/azure-databases/data-api-builder `
     --ConfigFileName /App/dab-config/dab-config.json
 
 # go to http://localhost:5000/api/Author
 
 # call from PowerShell
-$result = Invoke-RestMethod -Uri http://localhost:5000/api/SyncLog -Method Get
+$result = Invoke-RestMethod -Uri http://localhost:5000/api/Author -Method Get
 $result.Value
+
+# But can't post data, only read access
+$body = @{
+    "au_id" = "999-56-9999"
+    "au_fname" = "Jess"
+    "au_lname" = "Pomfret"
+    "contract" = "True"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri http://localhost:5000/api/Author -Method Post -Body $body -ContentType "application/json"
 
 # next steps
 # create an Azure Container App running DAB in production mode with Entra ID auth
