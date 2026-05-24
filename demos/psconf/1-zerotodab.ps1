@@ -10,13 +10,10 @@ if (-not (Test-Path -Path C:\GitHub\dab-presentation\demos\config)) {
 }
 Set-Location -Path C:\GitHub\dab-presentation\demos\config
 
-# store the connection string in an environment variable — never hardcoded in the config
-$env:CONN_STR = "Server=host.docker.internal,2500;User Id=sqladmin;Database=pubs;Password=dbatools.IO;TrustServerCertificate=True;Encrypt=True;"
-
 # use the dab cli
 dab init --database-type "mssql" `
         --host-mode "Development" `
-        --connection-string "@env('CONN_STR')"
+        --connection-string "Server=localhost,2500;User Id=sqladmin;Database=pubs;Password=dbatools.IO;TrustServerCertificate=True;Encrypt=True;"
 
 # or create with mssql extension
 

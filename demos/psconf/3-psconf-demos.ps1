@@ -55,27 +55,29 @@ $result.value
 
 # --- 3a. First page — 5 most recent runs ---
 $response = Invoke-RestMethod -Uri "$baseUrl/SyncLog?`$orderby=RunAt desc&`$first=5" -Headers $headers
-$response.value
+$response.value | Format-Table
 
 # --- 3b. Next page — follow the nextLink DAB gives you ---
 # DAB returns a nextLink when there are more rows. Use it as-is.
+$response | Format-List
+
 if ($response.nextLink) {
     $page2 = Invoke-RestMethod -Uri $response.nextLink -Headers $headers
-    $page2.value
+    $page2.value | Format-Table
 }
 
 # --- 3c. Filter — only show Error runs ---
 Invoke-RestMethod -Uri "$baseUrl/SyncLog?`$filter=Status eq 'Error'" -Headers $headers |
-    Select-Object -ExpandProperty value
+    Select-Object -ExpandProperty value | Format-Table
 
 # --- 3d. Filter — runs from a specific source in the last 7 days ---
 $since = (Get-Date).AddDays(-7).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 Invoke-RestMethod -Uri "$baseUrl/SyncLog?`$filter=Source eq 'IntervalsSync' and RunAt ge $since" -Headers $headers |
-    Select-Object -ExpandProperty value
+    Select-Object -ExpandProperty value | Format-Table
 
 # --- 3e. Select — only the columns you actually need ---
 Invoke-RestMethod -Uri "$baseUrl/SyncLog?`$select=LogId,RunAt,Source,Status,DurationMs&`$orderby=RunAt desc&`$first=10" -Headers $headers |
-    Select-Object -ExpandProperty value
+    Select-Object -ExpandProperty value | Format-Table
 
 # --- 3f. Combine the lot — filter + select + order + page ---
 Invoke-RestMethod -Uri "$baseUrl/SyncLog?`$filter=Status eq 'Success'&`$select=LogId,RunAt,TriggerType,WellnessUpserted,ActivitiesUpserted&`$orderby=RunAt desc&`$first=5" -Headers $headers |
