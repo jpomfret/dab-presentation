@@ -46,9 +46,10 @@ resource "azurerm_container_app" "dab" {
   # External HTTPS ingress on the standard port (443).
   # Container Apps terminates TLS; DAB listens on 5000 internally.
   ingress {
-    external_enabled = true
-    target_port      = 5000
-    transport        = "http"
+    external_enabled           = true
+    target_port                = 5000
+    transport                  = "http"
+    allow_insecure_connections = true
 
     traffic_weight {
       percentage      = 100

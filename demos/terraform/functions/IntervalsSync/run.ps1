@@ -8,7 +8,8 @@
 # Required app settings:
 #   INTERVALS_ATHLETE_ID  — intervals.icu athlete ID (use "0" for yourself)
 #   INTERVALS_API_KEY     — API key from intervals.icu /settings
-#   DAB_ENDPOINT          — Base URL of the DAB container (e.g. https://host.azurecontainerapps.io)
+#   DAB_ENDPOINT          — Base URL of the DAB container (http:// so Invoke-RestMethod
+#                           uses plain HTTP/1.1 — see container.tf)
 #   DAB_API_APP_ID        — Client ID of the DAB-API-Access app registration
 
 param($Timer)
@@ -26,16 +27,6 @@ if (-not $athleteId -or -not $apiKey -or -not $dabBase -or -not $dabAppId) {
 }
 
 $startTime = Get-Date
-
-# ── DAB HTTP client ────────────────────────────────────────────────────────────
-# Azure Container Apps rejects connections that negotiate HTTP/2.
-# Invoke-RestMethod has no way to force HTTP/1.1 in the PS build on this host
-# (-HttpVersionPolicy is not available), so we use HttpClient directly with
-# SocketsHttpHandler pinned to HTTP/1.1.
-$_handler                         = [System.Net.Http.SocketsHttpHandler]::new()
-$dabClient                        = [System.Net.Http.HttpClient]::new($_handler)
-$dabClient.DefaultRequestVersion  = [version]'1.1'
-$dabClient.DefaultVersionPolicy   = [System.Net.Http.HttpVersionPolicy]::RequestVersionOrLower
 
 # ── Basic auth header for intervals.icu (username is the literal "API_KEY") ───
 $base64Creds      = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("API_KEY:$apiKey"))
@@ -84,6 +75,8 @@ try {
     Write-Host "Token acquired (expires $($tokenResp.expires_on))"
 
     # ── Upsert wellness records via DAB ───────────────────────────────────────
+    $dabHeaders = @{ Authorization = "Bearer $dabToken" }
+
     foreach ($record in $wellness) {
         $body = @{
             RecordDate   = $record.id
@@ -102,11 +95,8 @@ try {
             Updated      = $record.updated
         } | ConvertTo-Json -Compress
 
-        $req         = [System.Net.Http.HttpRequestMessage]::new('POST', "$dabBase/api/UpsertWellness")
-        $req.Content = [System.Net.Http.StringContent]::new($body, [Text.Encoding]::UTF8, 'application/json')
-        $req.Headers.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $dabToken)
-        $resp = $dabClient.SendAsync($req).GetAwaiter().GetResult()
-        if (-not $resp.IsSuccessStatusCode) { throw "DAB $([int]$resp.StatusCode): $($resp.Content.ReadAsStringAsync().GetAwaiter().GetResult())" }
+        Invoke-RestMethod -Uri "$dabBase/api/UpsertWellness" -Method Post `
+            -Headers $dabHeaders -Body $body -ContentType 'application/json'
         $wellnessUpserted++
     }
     Write-Host "Upserted $wellnessUpserted wellness records"
@@ -134,11 +124,8 @@ try {
             ATL                 = $activity.icu_atl
         } | ConvertTo-Json -Compress
 
-        $req         = [System.Net.Http.HttpRequestMessage]::new('POST', "$dabBase/api/UpsertActivity")
-        $req.Content = [System.Net.Http.StringContent]::new($body, [Text.Encoding]::UTF8, 'application/json')
-        $req.Headers.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $dabToken)
-        $resp = $dabClient.SendAsync($req).GetAwaiter().GetResult()
-        if (-not $resp.IsSuccessStatusCode) { throw "DAB $([int]$resp.StatusCode): $($resp.Content.ReadAsStringAsync().GetAwaiter().GetResult())" }
+        Invoke-RestMethod -Uri "$dabBase/api/UpsertActivity" -Method Post `
+            -Headers $dabHeaders -Body $body -ContentType 'application/json'
         $activitiesUpserted++
     }
     Write-Host "Upserted $activitiesUpserted activity records"
@@ -147,8 +134,10 @@ try {
     $syncStatus = 'Error'
     $syncError  = $_.Exception.Message
     Write-Host "IntervalsSync ERROR [$($_.Exception.GetType().FullName)]: $syncError"
-    if ($_.Exception.InnerException) {
-        Write-Host "  Inner: [$($_.Exception.InnerException.GetType().FullName)] $($_.Exception.InnerException.Message)"
+    $ex = $_.Exception
+    while ($ex.InnerException) {
+        $ex = $ex.InnerException
+        Write-Host "  Inner [$($ex.GetType().FullName)]: $($ex.Message)"
     }
     Write-Host "  At: $($_.InvocationInfo.PositionMessage)"
 }
@@ -170,13 +159,9 @@ try {
     }
 
     if ($dabToken) {
-        # $Timer.IsPastDue means the scheduled timer fired late — it does NOT indicate
-        # a manual invocation. All timer-triggered runs are recorded as 'Timer'.
-        $triggerType = 'Timer'
-
         $logBody = @{
             Source             = 'IntervalsSync'
-            TriggerType        = $triggerType
+            TriggerType        = 'Timer'
             DateRangeStart     = $weekAgo
             DateRangeEnd       = $today
             WellnessFetched    = $wellnessFetched
@@ -188,19 +173,20 @@ try {
             ErrorMessage       = $syncError
         } | ConvertTo-Json -Compress
 
-        $req         = [System.Net.Http.HttpRequestMessage]::new('POST', "$dabBase/api/LogSync")
-        $req.Content = [System.Net.Http.StringContent]::new($logBody, [Text.Encoding]::UTF8, 'application/json')
-        $req.Headers.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $dabToken)
-        $resp = $dabClient.SendAsync($req).GetAwaiter().GetResult()
-        if (-not $resp.IsSuccessStatusCode) { throw "DAB $([int]$resp.StatusCode): $($resp.Content.ReadAsStringAsync().GetAwaiter().GetResult())" }
+        Invoke-RestMethod -Uri "$dabBase/api/LogSync" -Method Post `
+            -Headers @{ Authorization = "Bearer $dabToken" } `
+            -Body $logBody -ContentType 'application/json'
         Write-Host "Sync log written: $syncStatus, ${durationMs}ms, $wellnessUpserted wellness, $activitiesUpserted activities"
     } else {
         Write-Host "WARNING: Skipping sync log — no token available."
     }
 } catch {
     Write-Host "WARNING: Failed to write sync log: $($_.Exception.Message)"
-} finally {
-    $dabClient.Dispose()
+    $ex = $_.Exception
+    while ($ex.InnerException) {
+        $ex = $ex.InnerException
+        Write-Host "  Inner [$($ex.GetType().FullName)]: $($ex.Message)"
+    }
 }
 
 if ($syncStatus -eq 'Error') {

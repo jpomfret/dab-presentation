@@ -29,6 +29,9 @@ resource "azurerm_linux_function_app" "dab" {
   service_plan_id            = azurerm_service_plan.dab.id
 
   site_config {
+    application_insights_key               = azurerm_application_insights.dab.instrumentation_key
+    application_insights_connection_string = azurerm_application_insights.dab.connection_string
+
     application_stack {
       powershell_core_version = "7.4"
     }
@@ -36,11 +39,11 @@ resource "azurerm_linux_function_app" "dab" {
 
   app_settings = {
     FUNCTIONS_EXTENSION_VERSION = "~4"
-    # Application Insights
-    APPINSIGHTS_INSTRUMENTATIONKEY        = azurerm_application_insights.dab.instrumentation_key
-    APPLICATIONINSIGHTS_CONNECTION_STRING = azurerm_application_insights.dab.connection_string
-    # DAB container endpoint — the function calls this to proxy requests
-    DAB_ENDPOINT   = local.dab_endpoint
+    # DAB container endpoint — HTTP so Invoke-RestMethod uses plain HTTP/1.1.
+    # Container Apps HTTPS uses TLS ALPN which causes SocketsHttpHandler to
+    # negotiate HTTP/2; the ingress returns InvalidOperationException on that path.
+    # allow_insecure_connections = true on the Container App enables this HTTP URL.
+    DAB_ENDPOINT   = local.dab_endpoint_http
     # App registration app ID — used to request tokens for the DAB API audience
     DAB_API_APP_ID = azuread_application.dab_api.client_id
     # AZURE_CLIENT_ID is set by a separate null_resource after the MI is created
@@ -49,15 +52,24 @@ resource "azurerm_linux_function_app" "dab" {
     # Intervals.icu sync settings
     INTERVALS_ATHLETE_ID = var.intervals_athlete_id
     INTERVALS_API_KEY    = var.intervals_api_key
+
+    # Run-from-package: SAS URL pointing at the zipped function code in blob storage.
+    # Terraform manages this end-to-end — no null_resource or local-exec needed.
+    WEBSITE_RUN_FROM_PACKAGE = "${azurerm_storage_blob.function_package.url}${data.azurerm_storage_account_sas.function_package.sas}"
+    # Changes when the zip content changes, triggering a function app restart to pick up new code.
+    FUNCTION_PACKAGE_VERSION = data.archive_file.function_package.output_md5
   }
 
   identity {
     type = "SystemAssigned"
   }
 
-  # Prevent Terraform from overwriting AZURE_CLIENT_ID that is set post-deploy
+  # AZURE_CLIENT_ID is set by null_resource.function_client_id_setting (self-referential
+  # cycle — can't reference this resource's own identity.principal_id in app_settings).
   lifecycle {
-    ignore_changes = [app_settings["AZURE_CLIENT_ID"]]
+    ignore_changes = [
+      app_settings["AZURE_CLIENT_ID"],
+    ]
   }
 }
 
@@ -76,32 +88,55 @@ resource "null_resource" "function_client_id_setting" {
   }
 }
 
-# Zip and deploy the IntervalsSync function code to the function app.
-# Re-runs whenever run.ps1 or host.json change (tracked by file hash).
-resource "null_resource" "deploy_intervals_function" {
-  depends_on = [
-    azurerm_linux_function_app.dab,
-    null_resource.function_client_id_setting,
-  ]
+# Zip the function code. Re-runs whenever any file under functions/ changes.
+data "archive_file" "function_package" {
+  type        = "zip"
+  source_dir  = "${path.module}/functions"
+  output_path = "${path.module}/functions_package.zip"
+}
 
-  triggers = {
-    run_hash     = filemd5("${path.module}/functions/IntervalsSync/run.ps1")
-    host_hash    = filemd5("${path.module}/functions/host.json")
-    profile_hash = filemd5("${path.module}/functions/profile.ps1")
+# Upload the zip to blob storage. Terraform re-uploads whenever content_md5 changes.
+resource "azurerm_storage_blob" "function_package" {
+  name                   = "intervalssync.zip"
+  storage_account_name   = azurerm_storage_account.dab.name
+  storage_container_name = azurerm_storage_container.function_packages.name
+  type                   = "Block"
+  source                 = data.archive_file.function_package.output_path
+  content_md5            = data.archive_file.function_package.output_md5
+}
+
+# Account-level read SAS — used to build WEBSITE_RUN_FROM_PACKAGE.
+# Valid until 2099; the Functions runtime fetches the zip on cold start.
+data "azurerm_storage_account_sas" "function_package" {
+  connection_string = azurerm_storage_account.dab.primary_connection_string
+  https_only        = true
+
+  resource_types {
+    service   = false
+    container = false
+    object    = true
   }
 
-  provisioner "local-exec" {
-    interpreter = ["PowerShell", "-Command"]
-    command     = <<-EOT
-      $ErrorActionPreference = 'Stop'
-      $zipPath = [System.IO.Path]::ChangeExtension([System.IO.Path]::GetTempFileName(), '.zip')
-      Compress-Archive -Path "${path.module}/functions/*" -DestinationPath $zipPath -Force
-      az functionapp deployment source config-zip `
-        --name           "${var.function_app_name}" `
-        --resource-group "${var.resource_group_name}" `
-        --src            $zipPath
-      Remove-Item $zipPath -Force
-      Write-Host "IntervalsSync function deployed."
-    EOT
+  services {
+    blob  = true
+    queue = false
+    table = false
+    file  = false
+  }
+
+  start  = "2025-01-01T00:00:00Z"
+  expiry = "2099-01-01T00:00:00Z"
+
+  permissions {
+    read    = true
+    write   = false
+    delete  = false
+    list    = false
+    add     = false
+    create  = false
+    update  = false
+    process = false
+    tag     = false
+    filter  = false
   }
 }

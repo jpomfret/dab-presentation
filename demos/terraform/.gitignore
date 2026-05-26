@@ -6,6 +6,7 @@ terraform.tfvars
 *.tfvars
 !terraform.tfvars.example
 crash.log
+functions_package.zip
 override.tf
 override.tf.json
 *_override.tf

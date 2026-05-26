@@ -11,6 +11,16 @@ resource "azurerm_storage_account" "dab" {
   shared_access_key_enabled = true
 }
 
+# Private container for function app deployment packages.
+# The zip is uploaded here and WEBSITE_RUN_FROM_PACKAGE is set to a SAS URL
+# pointing at it — this is the reliable run-from-package approach for Linux
+# consumption plans (Kudu zip-push is unreliable on this hosting type).
+resource "azurerm_storage_container" "function_packages" {
+  name                  = "function-packages"
+  storage_account_id    = azurerm_storage_account.dab.id
+  container_access_type = "private"
+}
+
 resource "azurerm_storage_share" "dab" {
   name               = var.file_share_name
   storage_account_id = azurerm_storage_account.dab.id
