@@ -124,8 +124,15 @@ try {
             ATL                 = $activity.icu_atl
         } | ConvertTo-Json -Compress
 
-        Invoke-RestMethod -Uri "$dabBase/api/UpsertActivity" -Method Post `
-            -Headers $dabHeaders -Body $body -ContentType 'application/json'
+        $restSplat = @{
+            Uri = "$dabBase/api/UpsertActivity"
+            Method = 'Post'
+            Headers = $dabHeaders
+            Body = $body
+            ContentType = 'application/json'
+        }
+        Invoke-RestMethod @restSplat
+        
         $activitiesUpserted++
     }
     Write-Host "Upserted $activitiesUpserted activity records"

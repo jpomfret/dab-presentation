@@ -1,6 +1,8 @@
 # DAB via the official Microsoft container image
 # No dotnet tooling required — just Docker
 
+# Make sure you stopped the running dab session!
+
 # pull the image
 docker pull mcr.microsoft.com/azure-databases/data-api-builder
 
