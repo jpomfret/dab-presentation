@@ -544,7 +544,12 @@ function fmtDur(ms) {
 function fmtRecords(row) {
   // Only shown when $select is off (otherwise these columns aren't fetched)
   if (state.useSelect) return '<span class="col-hidden">not selected</span>';
-  if (row.Source === 'CalorieSync') return '<span class="col-hidden">n/a</span>';
+  // CalorieSync has no wellness rows — it lumps intake + burn upserts into
+  // ActivitiesUpserted, so show that as a plain record count instead of W·A.
+  if (row.Source === 'CalorieSync') {
+    const n = row.ActivitiesUpserted ?? 0;
+    return `<span style="color:var(--muted);font-size:0.78rem">${n} rec</span>`;
+  }
   const w = row.WellnessUpserted ?? 0;
   const a = row.ActivitiesUpserted ?? 0;
   return `<span style="color:var(--muted);font-size:0.78rem">${w}W · ${a}A</span>`;
