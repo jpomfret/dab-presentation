@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chase the Sun — Training Dashboard</title>
+  <title>Chase the Sun — Training Retrospective</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌞</text></svg>">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" integrity="sha512-CQBWl4fJHWbryGE+Pc7UAxWMUMNMWzWxF4SQo9CgkJIN1kx6djDQZjh3Y8SZ1d+6I+1zze6Z7kHXO7q3UyZAWw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <style>
@@ -66,13 +66,20 @@
       text-transform: uppercase;
       margin-top: 0.1rem;
     }
-
-    /* ── Countdown ───────────────────────────────────────── */
-    .countdown { display: flex; align-items: flex-end; gap: 0.4rem; }
-    .cd-unit { text-align: center; min-width: 2.8rem; }
-    .cd-num  { font-size: 1.8rem; font-weight: 700; color: var(--accent); line-height: 1; font-variant-numeric: tabular-nums; }
-    .cd-lbl  { font-size: 0.58rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
-    .cd-sep  { font-size: 1.4rem; font-weight: 700; color: var(--accent); padding-bottom: 1.1rem; }
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(34,197,94,.15);
+      color: var(--green);
+      border: 1px solid rgba(34,197,94,.3);
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.35rem 0.85rem;
+    }
 
     /* ── Main layout ─────────────────────────────────────── */
     main { padding: 2rem; max-width: 1280px; margin: 0 auto; }
@@ -91,7 +98,31 @@
     }
     .section-heading::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-    /* ── Wellness cards ──────────────────────────────────── */
+    /* ── Hero: the ride ──────────────────────────────────── */
+    .hero {
+      background:
+        radial-gradient(120% 120% at 100% 0%, rgba(249,115,22,.18) 0%, transparent 55%),
+        var(--card);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.75rem 2rem;
+      margin-bottom: 2.5rem;
+    }
+    .hero-top { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.25rem; }
+    .hero-title { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; }
+    .hero-title .em { color: var(--accent); }
+    .hero-date { font-size: 0.85rem; color: var(--muted); }
+    .hero-name { font-size: 0.9rem; color: var(--muted); margin-top: -0.75rem; margin-bottom: 1.25rem; }
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 1.25rem;
+    }
+    .hero-stat .hs-val { font-size: 2rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+    .hero-stat .hs-val small { font-size: 0.9rem; font-weight: 500; color: var(--muted); }
+    .hero-stat .hs-lbl { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-top: 0.35rem; }
+
+    /* ── Cards ───────────────────────────────────────────── */
     .wellness-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -134,7 +165,7 @@
 
     #date-note { font-size: 0.75rem; color: var(--muted); margin-top: -0.5rem; margin-bottom: 1.5rem; }
 
-    /* ── Calorie chart ───────────────────────────────────── */
+    /* ── Charts ──────────────────────────────────────────── */
     .chart-card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -142,7 +173,8 @@
       padding: 1.25rem 1.5rem;
       margin-bottom: 2.5rem;
     }
-    .chart-wrap { position: relative; height: 260px; }
+    .chart-wrap { position: relative; height: 300px; }
+    .chart-cal .chart-wrap { height: 260px; }
 
     /* ── Activity list ───────────────────────────────────── */
     .activities { display: flex; flex-direction: column; gap: 0.625rem; margin-bottom: 2rem; }
@@ -192,40 +224,56 @@
 <header>
   <div class="brand">
     🌞 Chase the <span>Sun</span>
-    <small>June 20, 2026 &middot; Training Dashboard</small>
+    <small>January – June 2026 &middot; Training Retrospective</small>
   </div>
   <div style="display:flex;gap:0.75rem;align-items:center">
+    <span class="status-chip" id="status-chip">✅ Ride complete · 20 Jun 2026</span>
     <a href="synclog.html" class="theme-toggle" style="text-decoration:none">🔄 Sync Log</a>
     <button class="theme-toggle" id="theme-btn" title="Toggle light/dark mode">☀️</button>
-  </div>
-  <div class="countdown">
-    <div class="cd-unit"><div class="cd-num" id="cd-d">--</div><div class="cd-lbl">days</div></div>
-    <div class="cd-sep">:</div>
-    <div class="cd-unit"><div class="cd-num" id="cd-h">--</div><div class="cd-lbl">hrs</div></div>
-    <div class="cd-sep">:</div>
-    <div class="cd-unit"><div class="cd-num" id="cd-m">--</div><div class="cd-lbl">min</div></div>
-    <div class="cd-sep">:</div>
-    <div class="cd-unit"><div class="cd-num" id="cd-s">--</div><div class="cd-lbl">sec</div></div>
   </div>
 </header>
 
 <main>
   <div id="error-box" class="error-bar" style="display:none"></div>
 
-  <div class="section-heading">Wellness</div>
+  <!-- ── HERO: the June 20 ride ────────────────────────────── -->
+  <div class="section-heading">The Ride</div>
+  <div class="hero" id="hero">
+    <div class="hero-top">
+      <div class="hero-title">🚴 Chase the <span class="em">Sun</span></div>
+      <div class="hero-date" id="hero-date">20 June 2026</div>
+    </div>
+    <div class="hero-name" id="hero-name">Loading the ride…</div>
+    <div class="hero-stats" id="hero-stats">
+      <div class="loading">Loading&hellip;</div>
+    </div>
+  </div>
+
+  <!-- ── The training build: fitness curve ─────────────────── -->
+  <div class="section-heading">The Build · Fitness &amp; Fatigue, Jan → Jun</div>
+  <div class="chart-card">
+    <div class="chart-wrap">
+      <canvas id="fitness-chart"></canvas>
+    </div>
+  </div>
+
+  <!-- ── Race-day form snapshot ────────────────────────────── -->
+  <div class="section-heading">Race-Day Form</div>
   <p id="date-note"></p>
   <div class="wellness-grid" id="wellness-grid">
     <div class="card"><div class="loading">Loading&hellip;</div></div>
   </div>
 
-  <div class="section-heading">Calorie Intake vs Expenditure</div>
-  <div class="chart-card">
+  <!-- ── Fuel ──────────────────────────────────────────────── -->
+  <div class="section-heading">Fuel · Calorie Intake vs Expenditure</div>
+  <div class="chart-card chart-cal">
     <div class="chart-wrap">
       <canvas id="calorie-chart"></canvas>
     </div>
   </div>
 
-  <div class="section-heading">Recent Activities</div>
+  <!-- ── Training log: final weeks ─────────────────────────── -->
+  <div class="section-heading">Training Log · Into the Taper</div>
   <div class="activities" id="activities-list">
     <div class="loading">Loading&hellip;</div>
   </div>
@@ -235,27 +283,15 @@
 // __DAB_ENDPOINT__ is substituted by Terraform at deploy time.
 const DAB_BASE = '__DAB_ENDPOINT__'.startsWith('__') ? '' : '__DAB_ENDPOINT__';
 
-const RACE_DATE = new Date('2026-06-20T04:00:00Z');
-
-// ── Countdown ─────────────────────────────────────────────────────────────────
-function pad(n) { return String(Math.max(0, n)).padStart(2, '0'); }
-function tick() {
-  const diff = RACE_DATE - new Date();
-  if (diff <= 0) {
-    document.getElementById('countdown').innerHTML =
-      '<span style="color:var(--accent);font-weight:700">🎉 Race Day!</span>';
-    return;
-  }
-  document.getElementById('cd-d').textContent = Math.floor(diff / 86400000);
-  document.getElementById('cd-h').textContent = pad(Math.floor(diff % 86400000 / 3600000));
-  document.getElementById('cd-m').textContent = pad(Math.floor(diff % 3600000 / 60000));
-  document.getElementById('cd-s').textContent = pad(Math.floor(diff % 60000 / 1000));
-}
-tick(); setInterval(tick, 1000);
+// The ride. All the demos hang off this date.
+const RACE_DATE  = '2026-06-20';
+const BUILD_FROM = '2026-01-01';
 
 // ── Fetch helper ──────────────────────────────────────────────────────────────
+// Keep literal '$' and ':' in OData params (URLSearchParams / encodeURIComponent
+// would break DAB's parser); only spaces need escaping.
 async function dabGet(path) {
-  const res = await fetch(`${DAB_BASE}${path}`);
+  const res = await fetch(`${DAB_BASE}${path.replace(/ /g, '%20')}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return (await res.json()).value ?? [];
 }
@@ -263,6 +299,119 @@ async function dabGet(path) {
 function showError(msg) {
   const el = document.getElementById('error-box');
   el.textContent = msg; el.style.display = 'block';
+}
+
+// ── Formatters ────────────────────────────────────────────────────────────────
+function fmtDist(m)  { return m ? (m/1000).toFixed(1)+' km' : '—'; }
+function fmtTime(s)  { if (!s) return '—'; const h=Math.floor(s/3600),m=Math.floor(s%3600/60); return h?`${h}h ${m}m`:`${m}m`; }
+function fmtNum(v,u='') { return v != null ? Math.round(v)+u : '—'; }
+
+// ── HERO: the ride ────────────────────────────────────────────────────────────
+async function loadRide() {
+  try {
+    // The ride sits on race day. Grab that day's activities, biggest first.
+    let rows = await dabGet(
+      `/api/IntervalsActivity?$filter=StartDateLocal ge ${RACE_DATE}T00:00:00Z and StartDateLocal lt 2026-06-21T00:00:00Z&$orderby=Distance desc&$first=1`
+    );
+    // Fallback: if nothing is tagged on that exact day, the longest ride in the
+    // whole block is almost certainly Chase the Sun.
+    if (!rows?.length) {
+      rows = await dabGet(`/api/IntervalsActivity?$orderby=Distance desc&$first=1`);
+    }
+    if (!rows?.length) {
+      document.getElementById('hero-name').textContent = 'No ride data yet — run the backfill.';
+      document.getElementById('hero-stats').innerHTML = '';
+      return;
+    }
+    const a = rows[0];
+    if (a.StartDateLocal) {
+      document.getElementById('hero-date').textContent =
+        new Date(a.StartDateLocal).toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+    }
+    document.getElementById('hero-name').textContent = a.ActivityName || a.ActivityType || 'The big one';
+
+    const stat = (val, lbl, unit='') => `
+      <div class="hero-stat">
+        <div class="hs-val c-accent">${val}${unit ? `<small> ${unit}</small>` : ''}</div>
+        <div class="hs-lbl">${lbl}</div>
+      </div>`;
+    document.getElementById('hero-stats').innerHTML =
+        stat(a.Distance != null ? (a.Distance/1000).toFixed(1) : '—', 'Distance', 'km')
+      + stat(fmtTime(a.MovingTime), 'Moving time')
+      + stat(a.TotalElevationGain != null ? Math.round(a.TotalElevationGain).toLocaleString() : '—', 'Elevation', 'm')
+      + stat(fmtNum(a.AverageWatts), 'Avg power', 'w')
+      + stat(fmtNum(a.AverageHeartrate), 'Avg HR', 'bpm')
+      + stat(fmtNum(a.TrainingLoad), 'Training load');
+  } catch(e) { showError(`Ride: ${e.message}`); }
+}
+
+// ── FITNESS CURVE: CTL / ATL across the build ─────────────────────────────────
+async function loadFitness() {
+  try {
+    const rows = await dabGet(
+      `/api/IntervalsWellness?$filter=RecordDate ge ${BUILD_FROM} and RecordDate le ${RACE_DATE}&$orderby=RecordDate asc&$first=300`
+    );
+    const canvas = document.getElementById('fitness-chart');
+    if (!rows?.length) {
+      canvas.parentElement.innerHTML = '<div class="loading c-muted">No wellness history yet — run the backfill.</div>';
+      return;
+    }
+
+    const labels = rows.map(r => new Date(r.RecordDate).toLocaleDateString('en-GB', { day:'numeric', month:'short' }));
+    const ctl    = rows.map(r => r.CTL != null ? Math.round(r.CTL) : null);
+    const atl    = rows.map(r => r.ATL != null ? Math.round(r.ATL) : null);
+
+    const c = chartColors();
+    const chart = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Fitness (CTL)',
+            data: ctl,
+            borderColor: '#f97316',
+            backgroundColor: 'rgba(249,115,22,0.12)',
+            borderWidth: 2.5,
+            pointRadius: 0,
+            tension: 0.25,
+            fill: true,
+          },
+          {
+            label: 'Fatigue (ATL)',
+            data: atl,
+            borderColor: '#3b82f6',
+            backgroundColor: 'transparent',
+            borderWidth: 1.75,
+            pointRadius: 0,
+            tension: 0.25,
+            fill: false,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { position: 'top', labels: { color: c.text, usePointStyle: true, pointStyleWidth: 12, padding: 20 } },
+          tooltip: { callbacks: { title: items => items[0].label } },
+        },
+        scales: {
+          x: {
+            ticks: { color: c.muted, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 },
+            grid:  { color: c.border },
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { color: c.muted },
+            grid:  { color: c.border },
+          },
+        },
+      },
+    });
+    registerChart(chart);
+  } catch(e) { showError(`Fitness: ${e.message}`); }
 }
 
 // ── Wellness colour helpers ───────────────────────────────────────────────────
@@ -278,7 +427,7 @@ function tsbBadge(tsb) {
   if (tsb < -30)   return '<span class="badge badge-red">Very Fatigued</span>';
   if (tsb < -10)   return '<span class="badge badge-green">Optimal</span>';
   if (tsb <= 5)    return '<span class="badge badge-muted">Neutral</span>';
-  return '<span class="badge badge-blue">Fresh</span>';
+  return '<span class="badge badge-blue">Fresh &amp; tapered</span>';
 }
 function weightColor(kg) {
   if (kg == null) return 'c-muted';
@@ -309,7 +458,11 @@ function optCard(label, value, unit, cls) {
 
 async function loadWellness() {
   try {
-    const rows = await dabGet('/api/IntervalsWellness?$orderby=RecordDate desc&$first=1');
+    // Form as it stood ON race day (fall back to the latest record we have).
+    let rows = await dabGet(`/api/IntervalsWellness?$filter=RecordDate eq ${RACE_DATE}&$first=1`);
+    if (!rows?.length) {
+      rows = await dabGet('/api/IntervalsWellness?$orderby=RecordDate desc&$first=1');
+    }
     if (!rows?.length) {
       document.getElementById('wellness-grid').innerHTML = '<div class="card c-muted">No wellness data yet.</div>';
       return;
@@ -350,13 +503,13 @@ async function loadWellness() {
 
 // ── Activities ────────────────────────────────────────────────────────────────
 const ICONS = { Ride:'🚴', Run:'🏃', Swim:'🏊', Walk:'🚶', VirtualRide:'🖥️', WeightTraining:'🏋️', Hike:'🥾', Rowing:'🚣', Yoga:'🧘', Workout:'💪', Strength:'🏋️', Cycling:'🚴', MountainBikeRide:'🚵', AlpineSki:'⛷️', NordicSki:'🎿' };
-function fmtDist(m)  { return m ? (m/1000).toFixed(1)+' km' : '—'; }
-function fmtTime(s)  { if (!s) return '—'; const h=Math.floor(s/3600),m=Math.floor(s%3600/60); return h?`${h}h ${m}m`:`${m}m`; }
-function fmtNum(v,u='') { return v != null ? Math.round(v)+u : '—'; }
 
 async function loadActivities() {
   try {
-    const rows = await dabGet('/api/IntervalsActivity?$orderby=StartDateLocal desc&$first=10');
+    // The last rides before and including the ride — the taper into race day.
+    const rows = await dabGet(
+      `/api/IntervalsActivity?$filter=StartDateLocal le 2026-06-21T00:00:00Z&$orderby=StartDateLocal desc&$first=10`
+    );
     if (!rows?.length) {
       document.getElementById('activities-list').innerHTML = '<div class="loading">No activities found.</div>';
       return;
@@ -384,22 +537,9 @@ async function loadActivities() {
   } catch(e) { showError(`Activities: ${e.message}`); }
 }
 
-// ── Theme toggle ──────────────────────────────────────────────────────────────
-(function() {
-  const saved = localStorage.getItem('theme') || 'dark';
-  if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
-  document.getElementById('theme-btn').textContent = saved === 'light' ? '🌙' : '☀️';
-})();
-document.getElementById('theme-btn').addEventListener('click', () => {
-  const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-  document.documentElement.setAttribute('data-theme', next === 'dark' ? '' : 'light');
-  document.getElementById('theme-btn').textContent = next === 'light' ? '🌙' : '☀️';
-  localStorage.setItem('theme', next);
-  if (window._calorieChart) {
-    updateChartTheme(window._calorieChart);
-    window._calorieChart.update();
-  }
-});
+// ── Chart theming ─────────────────────────────────────────────────────────────
+window._charts = [];
+function registerChart(chart) { window._charts.push(chart); }
 
 function chartColors() {
   const s = getComputedStyle(document.documentElement);
@@ -413,18 +553,36 @@ function chartColors() {
 
 function updateChartTheme(chart) {
   const c = chartColors();
-  chart.options.scales.x.ticks.color  = c.muted;
-  chart.options.scales.x.grid.color   = c.border;
-  chart.options.scales.y.ticks.color  = c.muted;
-  chart.options.scales.y.grid.color   = c.border;
-  chart.options.plugins.legend.labels.color = c.text;
+  ['x', 'y'].forEach(ax => {
+    if (chart.options.scales?.[ax]) {
+      chart.options.scales[ax].ticks.color = c.muted;
+      chart.options.scales[ax].grid.color  = c.border;
+    }
+  });
+  if (chart.options.plugins?.legend?.labels) {
+    chart.options.plugins.legend.labels.color = c.text;
+  }
 }
+
+// ── Theme toggle ──────────────────────────────────────────────────────────────
+(function() {
+  const saved = localStorage.getItem('theme') || 'dark';
+  if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+  document.getElementById('theme-btn').textContent = saved === 'light' ? '🌙' : '☀️';
+})();
+document.getElementById('theme-btn').addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', next === 'dark' ? '' : 'light');
+  document.getElementById('theme-btn').textContent = next === 'light' ? '🌙' : '☀️';
+  localStorage.setItem('theme', next);
+  (window._charts || []).forEach(ch => { updateChartTheme(ch); ch.update(); });
+});
 
 // ── Calories chart ────────────────────────────────────────────────────────────
 async function loadCalories() {
   try {
-    // Fetch intake and burn in parallel then merge by date — previously done
-    // by the Azure Function, now handled here now that we call DAB directly.
+    // Fetch intake and burn in parallel then merge by date — done here now that
+    // the dashboard calls DAB directly.
     const [intake, burn] = await Promise.all([
       dabGet('/api/FuelGaugeCalories?$orderby=EntryDate desc&$first=7'),
       dabGet('/api/FuelGaugeCalorieBurn?$orderby=EntryDate desc&$first=7'),
@@ -454,34 +612,13 @@ async function loadCalories() {
       data: {
         labels,
         datasets: [
+          { type: 'bar',  label: 'BMR',    data: bmrData,    backgroundColor: 'rgba(34,197,94,0.75)',  stack: 'burn', order: 2 },
+          { type: 'bar',  label: 'Active', data: activeData, backgroundColor: 'rgba(249,115,22,0.85)', stack: 'burn', order: 2 },
           {
-            type: 'bar',
-            label: 'BMR',
-            data: bmrData,
-            backgroundColor: 'rgba(34,197,94,0.75)',
-            stack: 'burn',
-            order: 2,
-          },
-          {
-            type: 'bar',
-            label: 'Active',
-            data: activeData,
-            backgroundColor: 'rgba(249,115,22,0.85)',
-            stack: 'burn',
-            order: 2,
-          },
-          {
-            type: 'line',
-            label: 'Intake',
-            data: intakeData,
-            borderColor: '#3b82f6',
-            backgroundColor: 'rgba(59,130,246,0.12)',
-            borderWidth: 2.5,
-            pointRadius: 4,
-            pointBackgroundColor: '#3b82f6',
-            tension: 0.3,
-            fill: false,
-            order: 1,
+            type: 'line', label: 'Intake', data: intakeData,
+            borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.12)',
+            borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#3b82f6',
+            tension: 0.3, fill: false, order: 1,
           },
         ],
       },
@@ -490,35 +627,22 @@ async function loadCalories() {
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         plugins: {
-          legend: {
-            position: 'top',
-            labels: { color: c.text, usePointStyle: true, pointStyleWidth: 12, padding: 20 },
-          },
-          tooltip: {
-            callbacks: {
-              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()} kcal`,
-            },
-          },
+          legend: { position: 'top', labels: { color: c.text, usePointStyle: true, pointStyleWidth: 12, padding: 20 } },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()} kcal` } },
         },
         scales: {
-          x: {
-            stacked: true,
-            ticks:  { color: c.muted, maxRotation: 30 },
-            grid:   { color: c.border },
-          },
-          y: {
-            stacked: true,
-            beginAtZero: true,
-            ticks:  { color: c.muted, callback: v => v.toLocaleString() },
-            grid:   { color: c.border },
-          },
+          x: { stacked: true, ticks: { color: c.muted, maxRotation: 30 }, grid: { color: c.border } },
+          y: { stacked: true, beginAtZero: true, ticks: { color: c.muted, callback: v => v.toLocaleString() }, grid: { color: c.border } },
         },
       },
     });
-    window._calorieChart = chart;
+    registerChart(chart);
   } catch(e) { showError(`Calories: ${e.message}`); }
 }
 
+// ── Boot ──────────────────────────────────────────────────────────────────────
+loadRide();
+loadFitness();
 loadWellness();
 loadCalories();
 loadActivities();
