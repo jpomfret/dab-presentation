@@ -285,7 +285,8 @@ const DAB_BASE = '__DAB_ENDPOINT__'.startsWith('__') ? '' : '__DAB_ENDPOINT__';
 
 // The ride. All the demos hang off this date.
 const RACE_DATE  = '2026-06-20';
-const BUILD_FROM = '2026-01-01';
+const CAL_FROM   = '2026-06-10';   // calorie chart window start (the taper into race day)
+const FITNESS_TO = '2026-06-23';   // fitness/fatigue curve end — 3 days past the ride (recovery)
 
 // ── Fetch helper ──────────────────────────────────────────────────────────────
 // Keep literal '$' and ':' in OData params (URLSearchParams / encodeURIComponent
@@ -337,7 +338,7 @@ async function loadRide() {
       </div>`;
     document.getElementById('hero-stats').innerHTML =
         stat(a.Distance != null ? (a.Distance/1000).toFixed(1) : '—', 'Distance', 'km')
-      + stat(fmtTime(a.MovingTime), 'Moving time')
+      + stat(fmtTime(a.ElapsedTime != null ? a.ElapsedTime : a.MovingTime), 'Total time')
       + stat(a.TotalElevationGain != null ? Math.round(a.TotalElevationGain).toLocaleString() : '—', 'Elevation', 'm')
       + stat(fmtNum(a.AverageWatts), 'Avg power', 'w')
       + stat(fmtNum(a.AverageHeartrate), 'Avg HR', 'bpm')
@@ -348,9 +349,12 @@ async function loadRide() {
 // ── FITNESS CURVE: CTL / ATL across the build ─────────────────────────────────
 async function loadFitness() {
   try {
-    const rows = await dabGet(
-      `/api/IntervalsWellness?$filter=RecordDate ge ${BUILD_FROM} and RecordDate le ${RACE_DATE}&$orderby=RecordDate asc&$first=300`
+    // DAB can't $filter a SQL `date` column, so fetch ordered and bound the end
+    // client-side to 3 days past the ride (recovery tail). ISO dates sort lexically.
+    const rowsAll = await dabGet(
+      `/api/IntervalsWellness?$orderby=RecordDate asc&$first=300`
     );
+    const rows = rowsAll.filter(r => r.RecordDate <= FITNESS_TO);
     const canvas = document.getElementById('fitness-chart');
     if (!rows?.length) {
       canvas.parentElement.innerHTML = '<div class="loading c-muted">No wellness history yet — run the backfill.</div>';
@@ -458,16 +462,14 @@ function optCard(label, value, unit, cls) {
 
 async function loadWellness() {
   try {
-    // Form as it stood ON race day (fall back to the latest record we have).
-    let rows = await dabGet(`/api/IntervalsWellness?$filter=RecordDate eq ${RACE_DATE}&$first=1`);
-    if (!rows?.length) {
-      rows = await dabGet('/api/IntervalsWellness?$orderby=RecordDate desc&$first=1');
-    }
-    if (!rows?.length) {
+    // Form as it stood ON race day. DAB can't $filter a SQL `date` column, so
+    // fetch the set and pin RACE_DATE client-side (fall back to the latest row).
+    const all = await dabGet('/api/IntervalsWellness?$orderby=RecordDate asc&$first=300');
+    const w   = all?.find(r => r.RecordDate === RACE_DATE) ?? all?.[all.length - 1];
+    if (!w) {
       document.getElementById('wellness-grid').innerHTML = '<div class="card c-muted">No wellness data yet.</div>';
       return;
     }
-    const w   = rows[0];
     const ctl = w.CTL != null ? Math.round(w.CTL) : null;
     const atl = w.ATL != null ? Math.round(w.ATL) : null;
     const tsb = ctl != null && atl != null ? ctl - atl : null;
@@ -581,12 +583,16 @@ document.getElementById('theme-btn').addEventListener('click', () => {
 // ── Calories chart ────────────────────────────────────────────────────────────
 async function loadCalories() {
   try {
-    // Fetch intake and burn in parallel then merge by date — done here now that
-    // the dashboard calls DAB directly.
-    const [intake, burn] = await Promise.all([
-      dabGet('/api/FuelGaugeCalories?$orderby=EntryDate desc&$first=7'),
-      dabGet('/api/FuelGaugeCalorieBurn?$orderby=EntryDate desc&$first=7'),
+    // Fetch intake and burn in parallel then merge by date. DAB can't $filter a
+    // SQL `date` column, so pull the set ascending and window the taper (10 Jun →
+    // race day) client-side — ISO date strings sort lexically.
+    const [intakeAll, burnAll] = await Promise.all([
+      dabGet('/api/FuelGaugeCalories?$orderby=EntryDate asc&$first=400'),
+      dabGet('/api/FuelGaugeCalorieBurn?$orderby=EntryDate asc&$first=400'),
     ]);
+    const inWindow = r => r.EntryDate >= CAL_FROM && r.EntryDate <= RACE_DATE;
+    const intake = intakeAll.filter(inWindow);
+    const burn   = burnAll.filter(inWindow);
 
     const canvas = document.getElementById('calorie-chart');
     if (!intake?.length) {
@@ -600,7 +606,7 @@ async function loadCalories() {
       DailyTotal:       r.DailyTotal       ?? 0,
       BmrCalories:      burnByDate[r.EntryDate]?.BmrCalories      ?? 0,
       ActivityCalories: burnByDate[r.EntryDate]?.ActivityCalories  ?? 0,
-    })).reverse();
+    }));
 
     const labels      = rows.map(r => new Date(r.EntryDate).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' }));
     const intakeData  = rows.map(r => r.DailyTotal       ?? 0);

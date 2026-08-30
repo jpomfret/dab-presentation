@@ -63,7 +63,7 @@ resource "null_resource" "app_identifier_uri" {
   }
 
   provisioner "local-exec" {
-    interpreter = ["PowerShell", "-Command"]
+    interpreter = ["PowerShell", "-NoProfile", "-Command"]
     command     = <<-EOT
       $ErrorActionPreference = 'Stop'
       az ad app update --id ${azuread_application.dab_api.client_id} --identifier-uris api://${azuread_application.dab_api.client_id}

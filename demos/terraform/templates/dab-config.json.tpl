@@ -99,6 +99,7 @@
           "ActivityType":        "",
           "ActivityName":        "",
           "MovingTime":          0,
+          "ElapsedTime":         0,
           "Distance":            0.0,
           "TrainingLoad":        0.0,
           "ATLLoad":             0.0,

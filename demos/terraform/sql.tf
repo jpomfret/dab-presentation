@@ -38,7 +38,7 @@ resource "azurerm_mssql_firewall_rule" "allow_azure_services" {
 # Fetch the public IP of the machine running terraform so the local-exec
 # provisioner below can reach the SQL server.
 data "external" "deployer_ip" {
-  program = ["PowerShell", "-Command", "Write-Output ('{\"ip\":\"' + (Invoke-RestMethod -Uri 'https://checkip.amazonaws.com').Trim() + '\"}')" ]
+  program = ["PowerShell", "-NoProfile", "-Command", "Write-Output ('{\"ip\":\"' + (Invoke-RestMethod -Uri 'https://checkip.amazonaws.com').Trim() + '\"}')" ]
 }
 
 resource "azurerm_mssql_firewall_rule" "deployer_ip" {
@@ -64,7 +64,7 @@ resource "null_resource" "container_db_user" {
   }
 
   provisioner "local-exec" {
-    interpreter = ["PowerShell", "-Command"]
+    interpreter = ["PowerShell", "-NoProfile", "-Command"]
     command     = <<-EOT
       $ErrorActionPreference = 'Stop'
       $token = (az account get-access-token --resource https://database.windows.net | ConvertFrom-Json).accessToken
@@ -93,7 +93,7 @@ resource "null_resource" "intervals_tables" {
   }
 
   provisioner "local-exec" {
-    interpreter = ["PowerShell", "-Command"]
+    interpreter = ["PowerShell", "-NoProfile", "-Command"]
     command     = <<-EOT
       $ErrorActionPreference = 'Stop'
       $token  = (az account get-access-token --resource https://database.windows.net | ConvertFrom-Json).accessToken
@@ -102,7 +102,10 @@ resource "null_resource" "intervals_tables" {
 
       Invoke-Sqlcmd -ServerInstance $server -Database $db -AccessToken $token -Query "IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'IntervalsWellness' AND schema_id = SCHEMA_ID('dbo')) BEGIN CREATE TABLE dbo.IntervalsWellness (RecordDate date NOT NULL, CTL float NULL, ATL float NULL, TSB float NULL, RampRate float NULL, CTLLoad float NULL, ATLLoad float NULL, Weight float NULL, RestingHR int NULL, HRV float NULL, SleepSecs int NULL, SleepScore float NULL, SleepQuality nvarchar(50) NULL, Form nvarchar(50) NULL, Updated datetime2 NULL, InsertedAt datetime2 NOT NULL DEFAULT GETUTCDATE(), CONSTRAINT PK_IntervalsWellness PRIMARY KEY (RecordDate)) END"
 
-      Invoke-Sqlcmd -ServerInstance $server -Database $db -AccessToken $token -Query "IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'IntervalsActivity' AND schema_id = SCHEMA_ID('dbo')) BEGIN CREATE TABLE dbo.IntervalsActivity (ActivityId nvarchar(50) NOT NULL, StartDateLocal datetime2 NULL, ActivityType nvarchar(50) NULL, ActivityName nvarchar(500) NULL, MovingTime int NULL, Distance float NULL, TrainingLoad float NULL, ATLLoad float NULL, CTLLoad float NULL, Intensity float NULL, AverageWatts float NULL, AverageHeartrate float NULL, TotalElevationGain float NULL, CTL float NULL, ATL float NULL, InsertedAt datetime2 NOT NULL DEFAULT GETUTCDATE(), CONSTRAINT PK_IntervalsActivity PRIMARY KEY (ActivityId)) END"
+      Invoke-Sqlcmd -ServerInstance $server -Database $db -AccessToken $token -Query "IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'IntervalsActivity' AND schema_id = SCHEMA_ID('dbo')) BEGIN CREATE TABLE dbo.IntervalsActivity (ActivityId nvarchar(50) NOT NULL, StartDateLocal datetime2 NULL, ActivityType nvarchar(50) NULL, ActivityName nvarchar(500) NULL, MovingTime int NULL, ElapsedTime int NULL, Distance float NULL, TrainingLoad float NULL, ATLLoad float NULL, CTLLoad float NULL, Intensity float NULL, AverageWatts float NULL, AverageHeartrate float NULL, TotalElevationGain float NULL, CTL float NULL, ATL float NULL, InsertedAt datetime2 NOT NULL DEFAULT GETUTCDATE(), CONSTRAINT PK_IntervalsActivity PRIMARY KEY (ActivityId)) END"
+
+      # Additive migration for databases created before ElapsedTime existed.
+      Invoke-Sqlcmd -ServerInstance $server -Database $db -AccessToken $token -Query "IF COL_LENGTH('dbo.IntervalsActivity','ElapsedTime') IS NULL ALTER TABLE dbo.IntervalsActivity ADD ElapsedTime int NULL"
 
       Invoke-Sqlcmd -ServerInstance $server -Database $db -AccessToken $token -InputFile "${path.module}/templates/usp_UpsertWellness.sql"
       Invoke-Sqlcmd -ServerInstance $server -Database $db -AccessToken $token -InputFile "${path.module}/templates/usp_UpsertActivity.sql"
@@ -130,7 +133,7 @@ resource "null_resource" "fuelgauge_calories" {
   }
 
   provisioner "local-exec" {
-    interpreter = ["PowerShell", "-Command"]
+    interpreter = ["PowerShell", "-NoProfile", "-Command"]
     command     = <<-EOT
       $ErrorActionPreference = 'Stop'
       $token  = (az account get-access-token --resource https://database.windows.net | ConvertFrom-Json).accessToken

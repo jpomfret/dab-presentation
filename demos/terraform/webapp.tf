@@ -37,7 +37,7 @@ resource "null_resource" "dashboard_redirect_uris" {
   }
 
   provisioner "local-exec" {
-    interpreter = ["PowerShell", "-Command"]
+    interpreter = ["PowerShell", "-NoProfile", "-Command"]
     command     = <<-EOT
       $ErrorActionPreference = 'Stop'
       $redirectUris = @(
@@ -74,7 +74,7 @@ resource "null_resource" "deploy_dashboard" {
   }
 
   provisioner "local-exec" {
-    interpreter = ["PowerShell", "-Command"]
+    interpreter = ["PowerShell", "-NoProfile", "-Command"]
     command     = <<-EOT
       $ErrorActionPreference = 'Stop'
 

@@ -4,6 +4,7 @@ CREATE OR ALTER PROCEDURE dbo.usp_UpsertActivity
     @ActivityType       nvarchar(50)  = NULL,
     @ActivityName       nvarchar(500) = NULL,
     @MovingTime         int           = NULL,
+    @ElapsedTime        int           = NULL,
     @Distance           float         = NULL,
     @TrainingLoad       float         = NULL,
     @ATLLoad            float         = NULL,
@@ -27,6 +28,7 @@ BEGIN
             ActivityType       = @ActivityType,
             ActivityName       = @ActivityName,
             MovingTime         = @MovingTime,
+            ElapsedTime        = @ElapsedTime,
             Distance           = @Distance,
             TrainingLoad       = @TrainingLoad,
             ATLLoad            = @ATLLoad,
@@ -38,10 +40,10 @@ BEGIN
             CTL                = @CTL,
             ATL                = @ATL
     WHEN NOT MATCHED THEN
-        INSERT (ActivityId, StartDateLocal, ActivityType, ActivityName, MovingTime,
+        INSERT (ActivityId, StartDateLocal, ActivityType, ActivityName, MovingTime, ElapsedTime,
                 Distance, TrainingLoad, ATLLoad, CTLLoad, Intensity,
                 AverageWatts, AverageHeartrate, TotalElevationGain, CTL, ATL)
-        VALUES (@ActivityId, TRY_CONVERT(datetime2, @StartDateLocal), @ActivityType, @ActivityName, @MovingTime,
+        VALUES (@ActivityId, TRY_CONVERT(datetime2, @StartDateLocal), @ActivityType, @ActivityName, @MovingTime, @ElapsedTime,
                 @Distance, @TrainingLoad, @ATLLoad, @CTLLoad, @Intensity,
                 @AverageWatts, @AverageHeartrate, @TotalElevationGain, @CTL, @ATL);
 END;

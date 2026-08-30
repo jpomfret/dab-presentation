@@ -130,18 +130,26 @@ try {
         # Activities feed can return wellness-only rows with no id — skip them.
         if (-not $activity.id) { continue }
 
+        # intervals.icu exposes power under several fields. average_watts (the
+        # Strava-style value) is often null even when the ride has power, so fall
+        # back to intervals' own computed averages. -not treats 0 as missing too.
+        $avgWatts = $activity.average_watts
+        if (-not $avgWatts) { $avgWatts = $activity.icu_average_watts }
+        if (-not $avgWatts) { $avgWatts = $activity.icu_weighted_avg_watts }
+
         $body = @{
             ActivityId          = $activity.id
             StartDateLocal      = $activity.start_date_local
             ActivityType        = $activity.type
             ActivityName        = $activity.name
             MovingTime          = $activity.moving_time
+            ElapsedTime         = $activity.elapsed_time
             Distance            = $activity.distance
             TrainingLoad        = $activity.icu_training_load
             ATLLoad             = $activity.icu_atl_load
             CTLLoad             = $activity.icu_ctl_load
             Intensity           = $activity.icu_intensity
-            AverageWatts        = $activity.average_watts
+            AverageWatts        = $avgWatts
             AverageHeartrate    = $activity.average_heartrate
             TotalElevationGain  = $activity.total_elevation_gain
             CTL                 = $activity.icu_ctl

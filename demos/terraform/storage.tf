@@ -44,7 +44,7 @@ resource "null_resource" "upload_dab_config" {
   }
 
   provisioner "local-exec" {
-    interpreter = ["PowerShell", "-Command"]
+    interpreter = ["PowerShell", "-NoProfile", "-Command"]
     command     = <<-EOT
       $ErrorActionPreference = 'Stop'
       $config = Get-Content "${path.module}/templates/dab-config.json.tpl" -Raw
