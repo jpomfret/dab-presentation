@@ -22,6 +22,13 @@ code dab-config.json
 # add an entity
 dab add Author --source "dbo.authors" --permissions "anonymous:*"
 
+# now we can use auto-config to generate config for all tables in the dbo schema
+dab auto-config my-def --patterns.include "dbo.%" --permissions "anonymous:*"
+
+# see which tables will be picked up
+# this doesn't seem to work - https://github.com/Azure/data-api-builder/issues/3791
+dab auto-config-simulate
+
 # start dab
 
 dab start
@@ -49,4 +56,4 @@ $result.Value
     # no auth?
     # connection string?
     # running locally
-
+    # AutoEntities potential schema leaks?
